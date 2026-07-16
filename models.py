@@ -48,16 +48,16 @@ class Generator(nn.Module):
     
 class Discriminator(nn.Module):
 
-    num_features = 64
+    initial_features = 64
 
     def __init__(self):
         super().__init__()
         self.nn = nn.Sequential(
-            GeneralConv1D(NUM_CHANNELS, self.num_features),
-            GeneralConv1D(self.num_features, self.num_features * 2),
-            GeneralConv1D(self.num_features * 2, self.num_features * 4),
-            GeneralConv1D(self.num_features * 4, self.num_features * 8),
-            GeneralConv1D(self.num_features * 8, 1) # decision
+            GeneralConv1D(NUM_CHANNELS, self.initial_features),
+            GeneralConv1D(self.initial_features, self.initial_features * 2),
+            GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
+            GeneralConv1D(self.initial_features * 4, self.initial_features * 8),
+            GeneralConv1D(self.initial_features * 8, 1)
         )
 
     def forward(self, x):
