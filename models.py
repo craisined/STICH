@@ -1,13 +1,30 @@
 import torch
 import torch.nn as nn
 
-num_channels = 1
 
-class GeneralConv(nn.Module):
-    pass
+NUM_CHANNELS = 1
+
+class GeneralConv1D(nn.Module):
+    def __init__(self, in_features, out_features, kernel_size=3):
+        super().__init__()
+        self.pad = nn.ReflectionPad1D(1)
+        self.conv = nn.Conv1d(in_features, out_features, kernel_size=3)
+
+    def forward(self, x):
+        pad = self.pad(x)
+        conv = self.conv(pad)
+        return conv
 
 class ResnetBlock(nn.Module):
-    pass
+    def __init__(self, num_features):
+        super().__init__()
+        self.conv_1 = GeneralConv1D(num_features, num_features)
+        self.conv_2 = GeneralConv1D(num_features, num_features)
+
+    def forward(self, x):
+        conv_1 = self.conv_1(x)
+        conv_2 = self.conv_2(conv_1)
+        return conv_2 + x
 
 class Generator(nn.Module):
     def __init__(self):
