@@ -27,9 +27,26 @@ class ResnetBlock(nn.Module):
         return conv_2 + x
 
 class Generator(nn.Module):
+
+    initial_features = 32
+
     def __init__(self):
         super().__init__()
-        self.nn = nn.Sequential()
+        self.nn = nn.Sequential(
+            # encoding
+            GeneralConv1D(NUM_CHANNELS, self.initial_features),
+            GeneralConv1D(self.initial_features, self.initial_features * 2),
+            GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
+
+            # transformation
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+
+            # decoding
+        )
 
     def forward(self, x):
         x = self.nn(x)
