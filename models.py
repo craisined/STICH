@@ -7,7 +7,7 @@ NUM_CHANNELS = 1
 class GeneralConv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.pad = nn.ReflectionPad1d(1)
+        self.pad = nn.ReflectionPad1d(1) # TODO: fix padding width
         self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size)
 
     def forward(self, x):
@@ -18,13 +18,35 @@ class GeneralConv1D(nn.Module):
 class GeneralConv2D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.pad = nn.ReflectionPad2d(1)
+        self.pad = nn.ReflectionPad2d(1) # TODO: fix padding width
         self.conv = nn.Conv2d(in_features, out_features, kernel_size=kernel_size)
 
     def forward(self, x):
         pad = self.pad(x)
         conv = self.conv(pad)
         return conv
+
+class GeneralDeconv1D(nn.Module):
+    def __init__(self, in_features, out_features, kernel_size=3):
+        super().__init__()
+        self.pad = nn.ReflectionPad1d() # TODO: fix padding width
+        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size)
+
+    def forward(self, x):
+        pad = self.pad(x)
+        deconv = self.deconv(x)
+        return deconv
+
+class GeneralDeconv2D(nn.Module):
+    def __init__(self, in_features, out_features, kernel_size=3):
+        super().__init__()
+        self.pad = nn.ReflectionPad2d() # TODO: fix padding width
+        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size=kernel_size)
+
+    def forward(self, x):
+        pad = self.pad(x)
+        deconv = self.deconv(x)
+        return deconv
 
 class ResnetBlock(nn.Module):
     def __init__(self, num_features):
@@ -38,9 +60,26 @@ class ResnetBlock(nn.Module):
         return conv_2 + x
 
 class Generator(nn.Module):
+
+    initial_features = 32
+
     def __init__(self):
         super().__init__()
-        self.nn = nn.Sequential()
+        self.nn = nn.Sequential(
+            # encoding
+            GeneralConv1D(NUM_CHANNELS, self.initial_features),
+            GeneralConv1D(self.initial_features, self.initial_features * 2),
+            GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
+
+            # transformation
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+
+            # decoding
+        )
 
     def forward(self, x):
         x = self.nn(x)
