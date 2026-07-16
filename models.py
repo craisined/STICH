@@ -29,8 +29,19 @@ class GeneralConv2D(nn.Module):
 class GeneralDeconv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.pad = nn.ReflectionPad1d()
-        self.deconv = nn.ConvTranspose1D(in_features, out_features, kernel_size=kernel_size)
+        self.pad = nn.ReflectionPad1d() # TODO: fix padding width
+        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size)
+
+    def forward(self, x):
+        pad = self.pad(x)
+        deconv = self.deconv(x)
+        return deconv
+
+class GeneralDeconv2D(nn.Module):
+    def __init__(self, in_features, out_features, kernel_size=3):
+        super().__init__()
+        self.pad = nn.ReflectionPad2d() # TODO: fix padding width
+        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size=kernel_size)
 
     def forward(self, x):
         pad = self.pad(x)
