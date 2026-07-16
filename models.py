@@ -54,22 +54,22 @@ class Generator(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.nn = nn.Sequential(
-            # encoding
+        self.encoder = nn.Sequential(
             GeneralConv1D(NUM_CHANNELS, self.initial_features),
             GeneralConv1D(self.initial_features, self.initial_features * 2),
-            GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
-
-            # transformation
+            GeneralConv1D(self.initial_features * 2, self.initial_features * 4))
+        
+        self.transformer = nn.Sequential(
             ResnetBlock(self.initial_features * 4),
             ResnetBlock(self.initial_features * 4),
             ResnetBlock(self.initial_features * 4),
             ResnetBlock(self.initial_features * 4),
-            ResnetBlock(self.initial_features * 4),
-
-            # decoding
-        )
+            ResnetBlock(self.initial_features * 4))
+        
+        self.decoder = nn.Sequential(
+            GeneralDeconv1D(self.initial_features * 4, self.initial_features * 2),
+            GeneralDeconv1D(self.initial_features * 2, self.initial_features),
+            GeneralDeconv1D(self.initial_features, 1))
 
     def forward(self, x):
-        x = self.nn(x)
-        return x
+        return self.decoder(self.transformer(self.encoder(x)))
