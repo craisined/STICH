@@ -84,3 +84,21 @@ class Generator(nn.Module):
     def forward(self, x):
         x = self.nn(x)
         return x
+    
+class Discriminator(nn.Module):
+
+    initial_features = 64
+
+    def __init__(self):
+        super().__init__()
+        self.nn = nn.Sequential(
+            GeneralConv1D(NUM_CHANNELS, self.initial_features),
+            GeneralConv1D(self.initial_features, self.initial_features * 2),
+            GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
+            GeneralConv1D(self.initial_features * 4, self.initial_features * 8),
+            GeneralConv1D(self.initial_features * 8, 1)
+        )
+
+    def forward(self, x):
+        x = self.nn(x)
+        return x
