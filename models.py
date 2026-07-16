@@ -4,8 +4,19 @@ import torch.nn as nn
 class GeneralConv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.pad = nn.ReflectionPad1D(1)
-        self.conv = nn.Conv1d(in_features, out_features, kernel_size=3)
+        self.pad = nn.ReflectionPad1d(1)
+        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size)
+
+    def forward(self, x):
+        pad = self.pad(x)
+        conv = self.conv(pad)
+        return conv
+
+class GeneralConv2D(nn.Module):
+    def __init__(self, in_features, out_features, kernel_size=3):
+        super().__init__()
+        self.pad = nn.ReflectionPad2d(1)
+        self.conv = nn.Conv2d(in_features, out_features, kernel_size=kernel_size)
 
     def forward(self, x):
         pad = self.pad(x)
