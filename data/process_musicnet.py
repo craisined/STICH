@@ -1,7 +1,5 @@
 # Download and store https://www.kaggle.com/datasets/imsparsh/musicnet-dataset/musicnet.npz
 
-
-
 from pathlib import Path
 import librosa
 import numpy as np
@@ -24,7 +22,6 @@ for recording_id in tqdm(dataset.files, desc="Creating numpy arrays", unit=" rec
     audio = librosa.resample(
         audio.astype(np.float32), orig_sr=musicnet_sr, target_sr=target_sr
     )
-
     
     num_clips = len(audio) // clip_length
     for i in range(num_clips):
