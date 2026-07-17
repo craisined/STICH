@@ -7,8 +7,8 @@ import librosa
 import numpy as np
 from tqdm import tqdm
 
-input_path = Path("musicnet.npz")
-output_dict = Path("musicnet_processed")
+input_path = Path("data/musicnet/musicnet.npz")
+output_dict = Path("data/musicnet_processed")
 output_dict.mkdir(parents=True, exist_ok=True)
 
 musicnet_sr = 44100
