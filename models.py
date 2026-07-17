@@ -1,50 +1,41 @@
 import torch
 import torch.nn as nn
 
-
 NUM_CHANNELS = 1
 
 class GeneralConv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.pad = nn.ReflectionPad1d(1) # TODO: fix padding width
-        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size)
+        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size, padding_mode="reflect")
 
     def forward(self, x):
-        pad = self.pad(x)
-        conv = self.conv(pad)
+        conv = self.conv(x)
         return conv
 
 class GeneralConv2D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.pad = nn.ReflectionPad2d(1) # TODO: fix padding width
-        self.conv = nn.Conv2d(in_features, out_features, kernel_size=kernel_size)
+        self.conv = nn.Conv2d(in_features, out_features, kernel_size=kernel_size, padding_mode="reflect")
 
     def forward(self, x):
-        pad = self.pad(x)
-        conv = self.conv(pad)
+        conv = self.conv(x)
         return conv
 
 class GeneralDeconv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.pad = nn.ReflectionPad1d() # TODO: fix padding width
-        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size)
+        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size, padding_mode="reflect")
 
     def forward(self, x):
-        pad = self.pad(x)
         deconv = self.deconv(x)
         return deconv
 
 class GeneralDeconv2D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.pad = nn.ReflectionPad2d() # TODO: fix padding width
-        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size=kernel_size)
+        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size=kernel_size, padding_mode="reflect")
 
     def forward(self, x):
-        pad = self.pad(x)
         deconv = self.deconv(x)
         return deconv
 
@@ -65,25 +56,25 @@ class Generator(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.nn = nn.Sequential(
-            # encoding
+        self.encoder = nn.Sequential(
             GeneralConv1D(NUM_CHANNELS, self.initial_features),
             GeneralConv1D(self.initial_features, self.initial_features * 2),
-            GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
-
-            # transformation
+            GeneralConv1D(self.initial_features * 2, self.initial_features * 4))
+        
+        self.transformer = nn.Sequential(
             ResnetBlock(self.initial_features * 4),
             ResnetBlock(self.initial_features * 4),
             ResnetBlock(self.initial_features * 4),
             ResnetBlock(self.initial_features * 4),
-            ResnetBlock(self.initial_features * 4),
-
-            # decoding
-        )
+            ResnetBlock(self.initial_features * 4))
+        
+        self.decoder = nn.Sequential(
+            GeneralDeconv1D(self.initial_features * 4, self.initial_features * 2),
+            GeneralDeconv1D(self.initial_features * 2, self.initial_features),
+            GeneralDeconv1D(self.initial_features, 1))
 
     def forward(self, x):
-        x = self.nn(x)
-        return x
+        return self.decoder(self.transformer(self.encoder(x)))
     
 class Discriminator(nn.Module):
 
