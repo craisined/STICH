@@ -75,18 +75,38 @@ class Generator(nn.Module):
 
     def forward(self, x):
         return self.decoder(self.transformer(self.encoder(x)))
+
+class GeneratorLoss(nn.Module):
+
+    def __init__(self, discriminator, opposing_generator, cycle_consistency_factor=10):
+        super().__init__()
+        self.discriminator = discriminator
+        self.opposing_generator = opposing_generator
+        self.cycle_consistency_factor = cycle_consistency_factor
+    
+    def forward(self, x):
+        gan_loss = torch.log(1 - self.discriminator(x))
+        cycle_consistency_loss = self.cycle_consistency_factor * \
+            torch.linalg.vector_norm(self.opposing_generator(self(x)) - x)
+        return gan_loss + cycle_consistency_loss
+
     
 class Discriminator(nn.Module):
 
     initial_features = 64
+    relu_factor = .2
 
     def __init__(self):
         super().__init__()
         self.nn = nn.Sequential(
             GeneralConv1D(NUM_CHANNELS, self.initial_features),
+            nn.LeakyReLU(self.relu_factor),
             GeneralConv1D(self.initial_features, self.initial_features * 2),
+            nn.LeakyReLU(self.relu_factor),
             GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
+            nn.LeakyReLU(self.relu_factor),
             GeneralConv1D(self.initial_features * 4, self.initial_features * 8),
+            nn.LeakyReLU(self.relu_factor),
             GeneralConv1D(self.initial_features * 8, 1)
         )
 
