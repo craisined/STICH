@@ -25,15 +25,14 @@ class DataLoader:
         self.pos_a = 0 
         self.pos_b = 0
 
-    def __len__(self): 
-        return self.a_is_bigger
-
     def _load(self, path): # loads a file into a tensor
         array = np.load(path).astype(np.float32)
         tensor = torch.from_numpy(array)
         return tensor.view(1, 1, -1)
     
     def reset(self):
+        random.shuffle(self.order_a)
+        random.shuffle(self.order_b)
         self.pos_a = 0 
         self.pos_b = 0
 
