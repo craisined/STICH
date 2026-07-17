@@ -7,59 +7,40 @@ import torch
 
 class DataLoader:
 
-    def __init__(self, dir_a, dir_b): # put in the directories
-        self.files_a = sorted(Path(dir_a).glob("*.npy"))
-        self.files_b = sorted(Path(dir_b).glob("*.npy"))
-        if not self.files_a:
-            raise FileNotFoundError(f"No .npy files found in {dir_a}")
-        if not self.files_b:
-            raise FileNotFoundError(f"No .npy files found in {dir_b}")
+    def __init__(self, humming_dir, classical_dir):
+        
+        self.humming_files = Path(humming_dir).glob("*.npy")
+        self.classical_files = Path(classical_dir).glob("*.npy")
+        self.humming_files_len = len(self.humming_files)
+        self.classical_files_len = len(self.classical_files)
 
-        self.a_is_bigger = len(self.files_a) >= len(self.files_b)
+        assert humming_files_len > classical_files_len # not great practice, but who's gonna stop me!
+        assert classical_files_len > 0
 
-        self.order_a = list(range(len(self.files_a)))
-        self.order_b = list(range(len(self.files_b)))
-        random.shuffle(self.order_a)
-        random.shuffle(self.order_b)
-        # keep track of indices
-        self.pos_a = 0 
-        self.pos_b = 0
+        self.reset()
 
-    def _load(self, path): # loads a file into a tensor
+    def _load(self, path):
         array = np.load(path).astype(np.float32)
-        tensor = torch.from_numpy(array)
-        return tensor.view(1, 1, -1)
+        tensor = torch.from_numpy(array) # TODO: check if shape is correct
+        return tensor
     
     def reset(self):
-        random.shuffle(self.order_a)
-        random.shuffle(self.order_b)
-        self.pos_a = 0 
-        self.pos_b = 0
+        random.shuffle(self.humming_files)
+        random.shuffle(self.classical_files)
+        self.humming_pos = 0 
+        self.classical_pos = 0
 
     def pop(self): 
-        a = self._load(self.files_a[self.order_a[self.pos_a]])
-        b = self._load(self.files_b[self.order_b[self.pos_b]])
+        humming = self._load(self.humming_files[self.humming_pos])
+        classical = self._load(self.classical_files[self.classical_pos])
 
-        # add to indices
-        self.pos_a += 1
-        self.pos_b += 1
+        self.humming_pos += 1
+        self.classical_pos += 1
 
-        a_done = self.pos_a >= len(self.order_a)
-        b_done = self.pos_b >= len(self.order_b)
+        if self.humming_pos >= self.humming_files_len:
+            self.reset()
+        elif self.classical_pos >= self.classical_files_len:
+            random.shuffle(self.classical_files_len)
+            self.classical_pos = 0
 
-        if (a_done and self.a_is_bigger) or (b_done and not self.a_is_bigger):
-            # the bigger one finished: reshuffle both and start from the beginning
-            random.shuffle(self.order_a)
-            random.shuffle(self.order_b)
-            self.pos_a = 0
-            self.pos_b = 0
-        else:
-            # only the smaller one ran out: reshuffle only the smaller one, keep the bigger one going
-            if a_done:
-                random.shuffle(self.order_a)
-                self.pos_a = 0
-            if b_done:
-                random.shuffle(self.order_b)
-                self.pos_b = 0
-
-        return a, b
+        return humming, classical
