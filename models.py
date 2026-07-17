@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import 
 
 NUM_CHANNELS = 1
 
@@ -75,6 +76,16 @@ class Generator(nn.Module):
 
     def forward(self, x):
         return self.decoder(self.transformer(self.encoder(x)))
+
+class GeneratorLoss(nn.Module):
+
+    def __init__(self, discriminator):
+        super().__init__()
+        self.discriminator = discriminator
+    
+    def forward(self, x):
+        pass
+
     
 class Discriminator(nn.Module):
 
