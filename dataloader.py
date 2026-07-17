@@ -32,6 +32,10 @@ class DataLoader:
         array = np.load(path).astype(np.float32)
         tensor = torch.from_numpy(array)
         return tensor.view(1, 1, -1)
+    
+    def reset(self):
+        self.pos_a = 0 
+        self.pos_b = 0
 
     def pop(self): 
         a = self._load(self.files_a[self.order_a[self.pos_a]])
