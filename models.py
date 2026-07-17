@@ -101,12 +101,19 @@ class Discriminator(nn.Module):
         self.nn = nn.Sequential(
             GeneralConv1D(NUM_CHANNELS, self.initial_features),
             nn.LeakyReLU(self.relu_factor),
+            
             GeneralConv1D(self.initial_features, self.initial_features * 2),
+            nn.InstanceNorm1d(self.initial_features * 2, affine=True),
             nn.LeakyReLU(self.relu_factor),
+            
             GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
+            nn.InstanceNorm1d(self.initial_features * 4, affine=True),
             nn.LeakyReLU(self.relu_factor),
+            
             GeneralConv1D(self.initial_features * 4, self.initial_features * 8),
+            nn.InstanceNorm1d(self.initial_features * 8, affine=True),
             nn.LeakyReLU(self.relu_factor),
+            
             GeneralConv1D(self.initial_features * 8, 1)
         )
 
