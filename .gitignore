@@ -1,3 +1,7 @@
 data/humtrans/*
 data/musicnet/*
 data/musicnet_processed/*
+data/humtrans_processed/*
+data/test/
+data/.DS_Store
+.DS_Store
