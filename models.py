@@ -42,13 +42,16 @@ class GeneralDeconv2D(nn.Module):
 class ResnetBlock(nn.Module):
     def __init__(self, num_features):
         super().__init__()
-        self.conv_1 = GeneralConv1D(num_features, num_features)
-        self.conv_2 = GeneralConv1D(num_features, num_features)
+        self.resnet = nn.Sequential(
+            GeneralConv1D(num_features, num_features),
+            nn.InstanceNorm1d(num_features),
+            nn.ReLU(),
+
+            GeneralConv1D(num_features, num_features),
+            nn.InstanceNorm1d(num_features))
 
     def forward(self, x):
-        conv_1 = self.conv_1(x)
-        conv_2 = self.conv_2(conv_1)
-        return conv_2 + x
+        return self.resnet(x) + x
 
 class Generator(nn.Module):
 
@@ -58,8 +61,15 @@ class Generator(nn.Module):
         super().__init__()
         self.encoder = nn.Sequential(
             GeneralConv1D(NUM_CHANNELS, self.initial_features),
+            nn.ReLU(),
+
             GeneralConv1D(self.initial_features, self.initial_features * 2),
-            GeneralConv1D(self.initial_features * 2, self.initial_features * 4))
+            nn.InstanceNorm1d(self.initial_features * 2),
+            nn.ReLU(),
+            
+            GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
+            nn.InstanceNorm1d(self.initial_features * 4),
+            nn.ReLU())
         
         self.transformer = nn.Sequential(
             ResnetBlock(self.initial_features * 4),
@@ -70,8 +80,16 @@ class Generator(nn.Module):
         
         self.decoder = nn.Sequential(
             GeneralDeconv1D(self.initial_features * 4, self.initial_features * 2),
+            nn.InstanceNorm1d(self.initial_features * 2),
+            nn.ReLU(),
+
             GeneralDeconv1D(self.initial_features * 2, self.initial_features),
-            GeneralDeconv1D(self.initial_features, 1))
+            nn.InstanceNorm1d(self.initial_features),
+            nn.ReLU(),
+
+            GeneralConv1D(self.initial_features, 1),
+            nn.InstanceNorm1d(1),
+            nn.Tanh())
 
     def forward(self, x):
         return self.decoder(self.transformer(self.encoder(x)))
