@@ -15,7 +15,7 @@ class DataLoader:
         self.classical_files_len = len(self.classical_files)
 
         assert self.humming_files_len > self.classical_files_len # not great practice, but who's gonna stop me!
-        assert classical_files_len > 0
+        assert self.classical_files_len > 0
 
         self.reset()
 
