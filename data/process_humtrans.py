@@ -5,8 +5,8 @@ import librosa
 import numpy as np
 from tqdm import tqdm
 
-input_dict = Path("humtrans")
-output_dict = Path("humtrans_processed")
+input_dict = Path("data/humtrans")
+output_dict = Path("data/humtrans_processed")
 output_dict.mkdir(parents=True, exist_ok=True)
 
 sampling_rate = 16000
