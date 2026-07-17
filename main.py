@@ -26,8 +26,8 @@ humming_disc.to(device)
 
 classical_to_humming_loss = GeneratorLoss(humming_disc, humming_to_classical_gen)
 humming_to_classical_loss = GeneratorLoss(classical_disc, classical_to_humming_gen)
-classical_disc_loss = nn.BCEwithLogitsLoss()
-humming_disc_loss = nn.BCEwithLogitsLoss()
+classical_disc_loss = nn.BCEWithLogitsLoss()
+humming_disc_loss = nn.BCEWithLogitsLoss()
 
 classical_to_humming_optim = torch.optim.SGD(classical_to_humming_gen.parameters(), lr=lr)
 humming_to_classical_optim = torch.optim.SGD(humming_to_classical_gen.parameters(), lr=lr)
