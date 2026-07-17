@@ -24,7 +24,7 @@ class GeneralConv2D(nn.Module):
 class GeneralDeconv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size, padding_mode="reflect")
+        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size, padding_mode="zeros") # TODO: Reflect?
 
     def forward(self, x):
         deconv = self.deconv(x)
@@ -33,7 +33,7 @@ class GeneralDeconv1D(nn.Module):
 class GeneralDeconv2D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size=kernel_size, padding_mode="reflect")
+        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size=kernel_size, padding_mode="zeros")
 
     def forward(self, x):
         deconv = self.deconv(x)
