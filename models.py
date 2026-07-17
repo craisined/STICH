@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import 
 
 NUM_CHANNELS = 1
 
@@ -79,12 +78,17 @@ class Generator(nn.Module):
 
 class GeneratorLoss(nn.Module):
 
-    def __init__(self, discriminator):
+    def __init__(self, discriminator, opposing_generator, cycle_consistency_factor=10):
         super().__init__()
         self.discriminator = discriminator
+        self.opposing_generator = opposing_generator
+        self.cycle_consistency_factor = cycle_consistency_factor
     
     def forward(self, x):
-        pass
+        gan_loss = torch.log(1 - self.discriminator(x))
+        cycle_consistency_loss = self.cycle_consistency_factor * \
+            torch.linalg.vector_norm(self.opposing_generator(self(x)) - x)
+        return gan_loss + cycle_consistency_loss
 
     
 class Discriminator(nn.Module):
