@@ -88,14 +88,19 @@ class Generator(nn.Module):
 class Discriminator(nn.Module):
 
     initial_features = 64
+    relu_factor = .2
 
     def __init__(self):
         super().__init__()
         self.nn = nn.Sequential(
             GeneralConv1D(NUM_CHANNELS, self.initial_features),
+            nn.LeakyReLU(self.relu_factor),
             GeneralConv1D(self.initial_features, self.initial_features * 2),
+            nn.LeakyReLU(self.relu_factor),
             GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
+            nn.LeakyReLU(self.relu_factor),
             GeneralConv1D(self.initial_features * 4, self.initial_features * 8),
+            nn.LeakyReLU(self.relu_factor),
             GeneralConv1D(self.initial_features * 8, 1)
         )
 
