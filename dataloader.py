@@ -9,8 +9,8 @@ class DataLoader:
 
     def __init__(self, humming_dir, classical_dir):
         
-        self.humming_files = Path(humming_dir).glob("*.npy")
-        self.classical_files = Path(classical_dir).glob("*.npy")
+        self.humming_files = list(Path(humming_dir).glob("*.npy"))
+        self.classical_files = list(Path(classical_dir).glob("*.npy"))
         self.humming_files_len = len(self.humming_files)
         self.classical_files_len = len(self.classical_files)
 
