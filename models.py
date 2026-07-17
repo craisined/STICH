@@ -6,7 +6,7 @@ NUM_CHANNELS = 1
 class GeneralConv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size, padding_mode="reflect")
+        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size, padding_mode="zeros")
 
     def forward(self, x):
         conv = self.conv(x)
@@ -15,7 +15,7 @@ class GeneralConv1D(nn.Module):
 class GeneralConv2D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.conv = nn.Conv2d(in_features, out_features, kernel_size=kernel_size, padding_mode="reflect")
+        self.conv = nn.Conv2d(in_features, out_features, kernel_size=kernel_size, padding_mode="zeros")
 
     def forward(self, x):
         conv = self.conv(x)
