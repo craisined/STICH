@@ -5,3 +5,4 @@ data/musicnet_processed/*
 data/test/
 data/.DS_Store
 .DS_Store
+__pycache__

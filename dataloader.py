@@ -22,6 +22,7 @@ class DataLoader:
     def _load(self, path):
         array = np.load(path).astype(np.float32)
         tensor = torch.from_numpy(array) # TODO: check if shape is correct
+        tensor = tensor.reshape((1, 1, -1))
         return tensor
     
     def reset(self):

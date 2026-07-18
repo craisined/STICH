@@ -6,7 +6,7 @@ NUM_CHANNELS = 1
 class GeneralConv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size, padding_mode="zeros")
+        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size, padding=(kernel_size - 1) // 2, padding_mode="zeros")
 
     def forward(self, x):
         conv = self.conv(x)
@@ -15,7 +15,7 @@ class GeneralConv1D(nn.Module):
 class GeneralConv2D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.conv = nn.Conv2d(in_features, out_features, kernel_size=kernel_size, padding_mode="zeros")
+        self.conv = nn.Conv2d(in_features, out_features, kernel_size=kernel_size, padding_mode="reflect") # TODO: padding for 2D
 
     def forward(self, x):
         conv = self.conv(x)
@@ -24,7 +24,7 @@ class GeneralConv2D(nn.Module):
 class GeneralDeconv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size, padding_mode="zeros") # TODO: Reflect?
+        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size, padding=(kernel_size - 1) // 2, padding_mode="zeros") # TODO: Reflect?
 
     def forward(self, x):
         deconv = self.deconv(x)
@@ -33,7 +33,7 @@ class GeneralDeconv1D(nn.Module):
 class GeneralDeconv2D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3):
         super().__init__()
-        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size=kernel_size, padding_mode="zeros")
+        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size=kernel_size, padding_mode="reflect") # TODO: padding for 2D
 
     def forward(self, x):
         deconv = self.deconv(x)
@@ -48,10 +48,12 @@ class ResnetBlock(nn.Module):
             nn.ReLU(),
 
             GeneralConv1D(num_features, num_features),
-            nn.InstanceNorm1d(num_features))
+            nn.InstanceNorm1d(num_features)
+        )
 
     def forward(self, x):
-        return self.resnet(x) + x
+        resnet_result = self.resnet(x)
+        return resnet_result + x
 
 class Generator(nn.Module):
 
@@ -69,7 +71,8 @@ class Generator(nn.Module):
             
             GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
             nn.InstanceNorm1d(self.initial_features * 4),
-            nn.ReLU())
+            nn.ReLU()
+        )
         
         self.transformer = nn.Sequential(
             ResnetBlock(self.initial_features * 4),
@@ -89,7 +92,8 @@ class Generator(nn.Module):
 
             GeneralConv1D(self.initial_features, 1),
             nn.InstanceNorm1d(1),
-            nn.Tanh())
+            nn.Tanh()
+        )
 
     def forward(self, x):
         return self.decoder(self.transformer(self.encoder(x)))
@@ -101,14 +105,14 @@ class GeneratorLoss(nn.Module):
         self.discriminator = discriminator
         self.opposing_generator = opposing_generator
         self.cycle_consistency_factor = cycle_consistency_factor
+        self.bce = nn.BCEWithLogitsLoss()
     
-    def forward(self, x):
-        gan_loss = torch.log(1 - self.discriminator(x))
-        cycle_consistency_loss = self.cycle_consistency_factor * \
-            torch.linalg.vector_norm(self.opposing_generator(self(x)) - x)
-        return gan_loss + cycle_consistency_loss
+    def forward(self, x, original):
+        disc_logits = self.discriminator(x)
+        gan_loss = self.bce(disc_logits, torch.ones_like(disc_logits))
+        cycle_consistency_loss = torch.linalg.vector_norm(self.opposing_generator(x) - original)
+        return gan_loss + self.cycle_consistency_factor * cycle_consistency_loss
 
-    
 class Discriminator(nn.Module):
 
     initial_features = 64

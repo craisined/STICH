@@ -2,9 +2,15 @@ from dataloader import DataLoader
 import logging
 from models import Generator, Discriminator, GeneratorLoss
 from pathlib import Path
+import sys
 import torch
 from torch import nn
 
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -54,8 +60,8 @@ for epoch in range(epochs):
             humming_output = classical_to_humming_gen(classical_data)
             classical_logits = classical_disc(classical_output)
             humming_logits = humming_disc(humming_output)
-            classical_loss_val = classical_disc_loss(classical_logits)
-            humming_loss_val = humming_disc_loss(humming_logits)
+            classical_loss_val = classical_disc_loss(classical_logits, torch.zeros_like(classical_logits))
+            humming_loss_val = humming_disc_loss(humming_logits, torch.zeros_like(humming_logits))
             classical_loss_val.backward()
             humming_loss_val.backward()
 
@@ -65,8 +71,8 @@ for epoch in range(epochs):
             # Train discriminator with real data
             classical_logits = classical_disc(classical_data)
             humming_logits = humming_disc(humming_data)
-            classical_loss_val = classical_disc_loss(classical_logits)
-            humming_loss_val = humming_disc_loss(humming_logits)
+            classical_loss_val = classical_disc_loss(classical_logits, torch.ones_like(classical_logits))
+            humming_loss_val = humming_disc_loss(humming_logits, torch.ones_like(humming_logits))
             classical_loss_val.backward()
             humming_loss_val.backward()
 
@@ -84,8 +90,8 @@ for epoch in range(epochs):
 
         classical_output = humming_to_classical_gen(humming_data)
         humming_output = classical_to_humming_gen(classical_data)
-        classical_loss_val = humming_to_classical_loss(classical_output)
-        humming_loss_val = classical_to_humming_loss(humming_output)
+        classical_loss_val = humming_to_classical_loss(classical_output, humming_data)
+        humming_loss_val = classical_to_humming_loss(humming_output, classical_data)
         classical_loss_val.backward()
         humming_loss_val.backward()
 
