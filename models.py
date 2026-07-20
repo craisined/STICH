@@ -4,36 +4,36 @@ import torch.nn as nn
 NUM_CHANNELS = 1
 
 class GeneralConv1D(nn.Module):
-    def __init__(self, in_features, out_features, kernel_size=3):
+    def __init__(self, in_features, out_features, kernel_size=3, stride=1):
         super().__init__()
-        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size, padding=(kernel_size - 1) // 2, padding_mode="zeros")
+        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=(kernel_size - 1) // 2, padding_mode="zeros")
 
     def forward(self, x):
         conv = self.conv(x)
         return conv
 
 class GeneralConv2D(nn.Module):
-    def __init__(self, in_features, out_features, kernel_size=3):
+    def __init__(self, in_features, out_features, kernel_size=3, stride=1):
         super().__init__()
-        self.conv = nn.Conv2d(in_features, out_features, kernel_size=kernel_size, padding_mode="reflect") # TODO: padding for 2D
+        self.conv = nn.Conv2d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding_mode="reflect") # TODO: padding for 2D
 
     def forward(self, x):
         conv = self.conv(x)
         return conv
 
 class GeneralDeconv1D(nn.Module):
-    def __init__(self, in_features, out_features, kernel_size=3):
+    def __init__(self, in_features, out_features, kernel_size=3, stride=1):
         super().__init__()
-        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size, padding=(kernel_size - 1) // 2, padding_mode="zeros") # TODO: Reflect?
+        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=(kernel_size - 1) // 2, padding_mode="zeros") # TODO: Reflect?
 
     def forward(self, x):
         deconv = self.deconv(x)
         return deconv
 
 class GeneralDeconv2D(nn.Module):
-    def __init__(self, in_features, out_features, kernel_size=3):
+    def __init__(self, in_features, out_features, kernel_size=3, stride=1):
         super().__init__()
-        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size=kernel_size, padding_mode="reflect") # TODO: padding for 2D
+        self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding_mode="reflect") # TODO: padding for 2D
 
     def forward(self, x):
         deconv = self.deconv(x)
