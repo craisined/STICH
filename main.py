@@ -17,8 +17,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 k = 1
 lr = 0.01
 
-disc_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed")
-gen_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed")
+disc_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed", device)
+gen_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed", device)
 
 classical_to_humming_gen = Generator()
 humming_to_classical_gen = Generator()
