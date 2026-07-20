@@ -107,16 +107,13 @@ class GeneratorLoss(nn.Module):
         self.cycle_consistency_factor = cycle_consistency_factor
 
         # self.bce = nn.BCEWithLogitsLoss()
-        self.softmax = nn.Softmax(dim=2)
         self.mse = nn.MSELoss()
         self.l1Loss = nn.L1Loss()
     
     def forward(self, x, original):
         disc_logits = self.discriminator(x)
-        disc_probs = self.softmax(disc_logits)\
-
         # gan_loss = self.bce(disc_logits, torch.ones_like(disc_logits))
-        gan_loss = self.mse(disc_probs, torch.ones_like(disc_logits))
+        gan_loss = self.mse(disc_logits, torch.ones_like(disc_logits))
         cycle_consistency_loss = self.l1Loss(self.opposing_generator(x), original)
         return gan_loss + self.cycle_consistency_factor * cycle_consistency_loss
 
@@ -155,10 +152,8 @@ class DiscriminatorLoss(nn.Module):
     def __init__(self):
         super().__init__()
         # self.bce = nn.BCEWithLogitsLoss()
-        self.softmax = nn.Softmax(dim=2)
         self.mse = nn.MSELoss()
     
     def forward(self, x, original):
         # return self.bce(x, original)
-        disc_probs = self.softmax(x)
-        return self.mse(disc_probs, original)
+        return self.mse(x, original)
