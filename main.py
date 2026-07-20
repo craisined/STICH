@@ -1,6 +1,6 @@
 from dataloader import DataLoader
 import logging
-from models import Generator, Discriminator, GeneratorLoss
+from models import DiscriminatorLoss, Generator, Discriminator, GeneratorLoss
 from pathlib import Path
 import sys
 import torch
@@ -32,10 +32,8 @@ humming_disc.to(device)
 
 classical_to_humming_loss = GeneratorLoss(humming_disc, humming_to_classical_gen)
 humming_to_classical_loss = GeneratorLoss(classical_disc, classical_to_humming_gen)
-# classical_disc_loss = nn.BCEWithLogitsLoss()
-# humming_disc_loss = nn.BCEWithLogitsLoss()
-classical_disc_loss = nn.MSELoss()
-humming_disc_loss = nn.MSELoss()
+classical_disc_loss = DiscriminatorLoss()
+humming_disc_loss = DiscriminatorLoss()
 
 classical_to_humming_optim = torch.optim.SGD(classical_to_humming_gen.parameters(), lr=lr)
 humming_to_classical_optim = torch.optim.SGD(humming_to_classical_gen.parameters(), lr=lr)
