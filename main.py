@@ -16,6 +16,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 k = 1
 lr = 0.01
+betas = (0.5, 0.999)
 
 disc_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed", device)
 gen_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed", device)
@@ -35,10 +36,10 @@ humming_to_classical_loss = GeneratorLoss(classical_disc, classical_to_humming_g
 classical_disc_loss = DiscriminatorLoss()
 humming_disc_loss = DiscriminatorLoss()
 
-classical_to_humming_optim = torch.optim.SGD(classical_to_humming_gen.parameters(), lr=lr)
-humming_to_classical_optim = torch.optim.SGD(humming_to_classical_gen.parameters(), lr=lr)
-classical_disc_optim = torch.optim.SGD(classical_disc.parameters(), lr=lr)
-humming_disc_optim = torch.optim.SGD(humming_disc.parameters(), lr=lr)
+classical_to_humming_optim = torch.optim.Adam(classical_to_humming_gen.parameters(), lr=lr, betas=betas)
+humming_to_classical_optim = torch.optim.Adam(humming_to_classical_gen.parameters(), lr=lr, betas=betas)
+classical_disc_optim = torch.optim.Adam(classical_disc.parameters(), lr=lr, betas=betas)
+humming_disc_optim = torch.optim.Adam(humming_disc.parameters(), lr=lr, betas=betas)
 
 epochs = 10
 dataset_length = 14000
