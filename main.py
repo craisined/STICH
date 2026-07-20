@@ -17,8 +17,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 k = 1
 lr = 0.01
 
-disc_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed")
-gen_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed")
+disc_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed", device)
+gen_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed", device)
 
 classical_to_humming_gen = Generator()
 humming_to_classical_gen = Generator()
@@ -34,7 +34,6 @@ classical_to_humming_loss = GeneratorLoss(humming_disc, humming_to_classical_gen
 humming_to_classical_loss = GeneratorLoss(classical_disc, classical_to_humming_gen)
 # classical_disc_loss = nn.BCEWithLogitsLoss()
 # humming_disc_loss = nn.BCEWithLogitsLoss()
-softmax = nn.Softmax()
 classical_disc_loss = nn.MSELoss()
 humming_disc_loss = nn.MSELoss()
 
@@ -60,14 +59,15 @@ for epoch in range(epochs):
 
             # Train discriminator with fake data
             classical_output = humming_to_classical_gen(humming_data)
-            humming_output = classical_to_humming_gen(classical_data)
+            classical_output.detach()
             classical_logits = classical_disc(classical_output)
-            humming_logits = humming_disc(humming_output)
-            classical_probs = softmax(classical_logits)
-            humming_probs = softmax(humming_logits)
-            classical_loss_val = classical_disc_loss(classical_probs, torch.zeros_like(classical_logits))
-            humming_loss_val = humming_disc_loss(humming_probs, torch.zeros_like(humming_logits))
+            classical_loss_val = classical_disc_loss(classical_logits, torch.zeros_like(classical_logits))
             classical_loss_val.backward()
+
+            humming_output = classical_to_humming_gen(classical_data)
+            humming_output.detach()
+            humming_logits = humming_disc(humming_output)
+            humming_loss_val = humming_disc_loss(humming_logits, torch.zeros_like(humming_logits))
             humming_loss_val.backward()
 
             logger.info(f"Loss for classical discriminator (fake): {classical_loss_val}")
@@ -75,12 +75,11 @@ for epoch in range(epochs):
 
             # Train discriminator with real data
             classical_logits = classical_disc(classical_data)
-            humming_logits = humming_disc(humming_data)
-            classical_probs = softmax(classical_logits)
-            humming_probs = softmax(humming_logits)
-            classical_loss_val = classical_disc_loss(classical_probs, torch.ones_like(classical_logits))
-            humming_loss_val = humming_disc_loss(humming_probs, torch.ones_like(humming_logits))
+            classical_loss_val = classical_disc_loss(classical_logits, torch.ones_like(classical_logits))
             classical_loss_val.backward()
+
+            humming_logits = humming_disc(humming_data)
+            humming_loss_val = humming_disc_loss(humming_logits, torch.ones_like(humming_logits))
             humming_loss_val.backward()
 
             classical_disc_optim.step()
@@ -96,10 +95,11 @@ for epoch in range(epochs):
         humming_data, classical_data = gen_dataloader.pop()
 
         classical_output = humming_to_classical_gen(humming_data)
-        humming_output = classical_to_humming_gen(classical_data)
         classical_loss_val = humming_to_classical_loss(classical_output, humming_data)
-        humming_loss_val = classical_to_humming_loss(humming_output, classical_data)
         classical_loss_val.backward()
+
+        humming_output = classical_to_humming_gen(classical_data)
+        humming_loss_val = classical_to_humming_loss(humming_output, classical_data)
         humming_loss_val.backward()
 
         classical_to_humming_optim.step()

@@ -5,8 +5,9 @@ import torch
 
 class DataLoader:
 
-    def __init__(self, humming_dir, classical_dir):
-        
+    def __init__(self, humming_dir, classical_dir, device=None):
+
+        self.device = device
         self.humming_files = list(Path(humming_dir).glob("*.npy"))
         self.classical_files = list(Path(classical_dir).glob("*.npy"))
         self.humming_files_len = len(self.humming_files)
@@ -21,7 +22,7 @@ class DataLoader:
         array = np.load(path).astype(np.float32)
         tensor = torch.from_numpy(array) # TODO: check if shape is correct
         tensor = tensor.reshape((1, 1, -1))
-        return tensor
+        return tensor.to(self.device)
     
     def reset(self):
         random.shuffle(self.humming_files)
@@ -39,7 +40,7 @@ class DataLoader:
         if self.humming_pos >= self.humming_files_len:
             self.reset()
         elif self.classical_pos >= self.classical_files_len:
-            random.shuffle(self.classical_files_len)
+            random.shuffle(self.classical_files)
             self.classical_pos = 0
 
         return humming, classical
