@@ -31,8 +31,8 @@ class DataLoader:
         self.classical_pos = 0
 
     def pop(self): 
-        humming = self._load(self.humming_files[self.humming_pos])
-        classical = self._load(self.classical_files[self.classical_pos])
+        humming = self.crop(self._load(self.humming_files[self.humming_pos]))
+        classical = self.crop(self._load(self.classical_files[self.classical_pos]))
 
         self.humming_pos += 1
         self.classical_pos += 1
@@ -44,3 +44,11 @@ class DataLoader:
             self.classical_pos = 0
 
         return humming, classical
+    
+    def crop(self, sample):
+        original_length = sample.shape[2]
+        remainder = original_length % 4
+        cropped_length = original_length - remainder
+        cropped_sample = sample[:, :, :cropped_length]
+        
+        return cropped_sample
