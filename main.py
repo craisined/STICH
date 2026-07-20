@@ -56,14 +56,12 @@ for epoch in range(epochs):
             humming_data, classical_data = disc_dataloader.pop()
 
             # Train discriminator with fake data
-            classical_output = humming_to_classical_gen(humming_data)
-            classical_output.detach()
+            classical_output = humming_to_classical_gen(humming_data).detach()
             classical_logits = classical_disc(classical_output)
             classical_loss_val = classical_disc_loss(classical_logits, torch.zeros_like(classical_logits))
             classical_loss_val.backward()
 
-            humming_output = classical_to_humming_gen(classical_data)
-            humming_output.detach()
+            humming_output = classical_to_humming_gen(classical_data).detach()
             humming_logits = humming_disc(humming_output)
             humming_loss_val = humming_disc_loss(humming_logits, torch.zeros_like(humming_logits))
             humming_loss_val.backward()
