@@ -34,6 +34,7 @@ classical_to_humming_loss = GeneratorLoss(humming_disc, humming_to_classical_gen
 humming_to_classical_loss = GeneratorLoss(classical_disc, classical_to_humming_gen)
 # classical_disc_loss = nn.BCEWithLogitsLoss()
 # humming_disc_loss = nn.BCEWithLogitsLoss()
+softmax = nn.Softmax()
 classical_disc_loss = nn.MSELoss()
 humming_disc_loss = nn.MSELoss()
 
@@ -62,8 +63,10 @@ for epoch in range(epochs):
             humming_output = classical_to_humming_gen(classical_data)
             classical_logits = classical_disc(classical_output)
             humming_logits = humming_disc(humming_output)
-            classical_loss_val = classical_disc_loss(classical_logits, torch.zeros_like(classical_logits))
-            humming_loss_val = humming_disc_loss(humming_logits, torch.zeros_like(humming_logits))
+            classical_probs = softmax(classical_logits)
+            humming_probs = softmax(humming_logits)
+            classical_loss_val = classical_disc_loss(classical_probs, torch.zeros_like(classical_logits))
+            humming_loss_val = humming_disc_loss(humming_probs, torch.zeros_like(humming_logits))
             classical_loss_val.backward()
             humming_loss_val.backward()
 
@@ -73,8 +76,10 @@ for epoch in range(epochs):
             # Train discriminator with real data
             classical_logits = classical_disc(classical_data)
             humming_logits = humming_disc(humming_data)
-            classical_loss_val = classical_disc_loss(classical_logits, torch.ones_like(classical_logits))
-            humming_loss_val = humming_disc_loss(humming_logits, torch.ones_like(humming_logits))
+            classical_probs = softmax(classical_logits)
+            humming_probs = softmax(humming_logits)
+            classical_loss_val = classical_disc_loss(classical_probs, torch.ones_like(classical_logits))
+            humming_loss_val = humming_disc_loss(humming_probs, torch.ones_like(humming_logits))
             classical_loss_val.backward()
             humming_loss_val.backward()
 
