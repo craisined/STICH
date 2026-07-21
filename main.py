@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 k = 1
-lr = 0.01
+lr = 2e-4
 betas = (0.5, 0.999)
 
 disc_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed", device)
@@ -60,30 +60,28 @@ for epoch in range(epochs):
             classical_output = humming_to_classical_gen(humming_data).detach()
             classical_logits = classical_disc(classical_output)
             classical_loss_val = classical_disc_loss(classical_logits, torch.zeros_like(classical_logits))
+            logger.info(f"Loss for classical discriminator (fake): {classical_loss_val}")
             classical_loss_val.backward()
 
             humming_output = classical_to_humming_gen(classical_data).detach()
             humming_logits = humming_disc(humming_output)
             humming_loss_val = humming_disc_loss(humming_logits, torch.zeros_like(humming_logits))
-            humming_loss_val.backward()
-
-            logger.info(f"Loss for classical discriminator (fake): {classical_loss_val}")
             logger.info(f"Loss for humming discriminator (fake): {humming_loss_val}")
+            humming_loss_val.backward()
 
             # Train discriminator with real data
             classical_logits = classical_disc(classical_data)
             classical_loss_val = classical_disc_loss(classical_logits, torch.ones_like(classical_logits))
+            logger.info(f"Loss for classical discriminator (real): {classical_loss_val}")
             classical_loss_val.backward()
 
             humming_logits = humming_disc(humming_data)
             humming_loss_val = humming_disc_loss(humming_logits, torch.ones_like(humming_logits))
+            logger.info(f"Loss for humming discriminator (real): {humming_loss_val}")
             humming_loss_val.backward()
 
             classical_disc_optim.step()
             humming_disc_optim.step()
-
-            logger.info(f"Loss for classical discriminator (real): {classical_loss_val}")
-            logger.info(f"Loss for humming discriminator (real): {humming_loss_val}")
 
         # Train generators
         classical_to_humming_optim.zero_grad()
@@ -93,14 +91,13 @@ for epoch in range(epochs):
 
         classical_output = humming_to_classical_gen(humming_data)
         classical_loss_val = humming_to_classical_loss(classical_output, humming_data)
+        logger.info(f"Loss for classical generator: {classical_loss_val}")
         classical_loss_val.backward()
 
         humming_output = classical_to_humming_gen(classical_data)
         humming_loss_val = classical_to_humming_loss(humming_output, classical_data)
+        logger.info(f"Loss for humming generator: {humming_loss_val}")
         humming_loss_val.backward()
 
         classical_to_humming_optim.step()
         humming_to_classical_optim.step()
-
-        logger.info(f"Loss for classical generator: {classical_loss_val}")
-        logger.info(f"Loss for humming generator: {humming_loss_val}")
