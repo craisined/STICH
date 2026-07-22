@@ -4,10 +4,11 @@ import torch.nn as nn
 NUM_CHANNELS = 1
 
 class GeneralConv1D(nn.Module):
-    def __init__(self, in_features, out_features, kernel_size=25, stride=1):
+    def __init__(self, in_features, out_features, kernel_size=25, stride=1, padding=None):
         super().__init__()
         kernel_size = kernel_size + (kernel_size - stride) % 2
-        padding = (kernel_size - stride) // 2
+        if padding is None:
+            padding = (kernel_size - stride) // 2
         self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=padding, padding_mode="zeros")
 
     def forward(self, x):
@@ -24,10 +25,11 @@ class GeneralConv2D(nn.Module):
         return conv
 
 class GeneralDeconv1D(nn.Module):
-    def __init__(self, in_features, out_features, kernel_size=25, stride=1):
+    def __init__(self, in_features, out_features, kernel_size=25, stride=1, padding=None):
         super().__init__()
         kernel_size = kernel_size + (kernel_size - stride) % 2
-        padding = (kernel_size - stride) // 2
+        if padding is None:
+            padding = (kernel_size - stride) // 2
         self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=padding, padding_mode="zeros") # TODO: Reflect?
 
     def forward(self, x):
