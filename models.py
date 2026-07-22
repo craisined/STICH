@@ -4,9 +4,12 @@ import torch.nn as nn
 NUM_CHANNELS = 1
 
 class GeneralConv1D(nn.Module):
-    def __init__(self, in_features, out_features, kernel_size=3, stride=1):
+    def __init__(self, in_features, out_features, kernel_size=25, stride=1, padding=None):
         super().__init__()
-        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=(kernel_size - 1) // 2, padding_mode="zeros")
+        kernel_size = kernel_size + (kernel_size - stride) % 2
+        if padding is None:
+            padding = (kernel_size - stride) // 2
+        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=padding, padding_mode="zeros")
 
     def forward(self, x):
         conv = self.conv(x)
@@ -22,9 +25,12 @@ class GeneralConv2D(nn.Module):
         return conv
 
 class GeneralDeconv1D(nn.Module):
-    def __init__(self, in_features, out_features, kernel_size=3, stride=1):
+    def __init__(self, in_features, out_features, kernel_size=25, stride=1, padding=None):
         super().__init__()
-        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=(kernel_size - 1) // 2, padding_mode="zeros") # TODO: Reflect?
+        kernel_size = kernel_size + (kernel_size - stride) % 2
+        if padding is None:
+            padding = (kernel_size - stride) // 2
+        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=padding, padding_mode="zeros") # TODO: Reflect?
 
     def forward(self, x):
         deconv = self.deconv(x)
@@ -62,10 +68,10 @@ class Generator(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
-            GeneralConv1D(NUM_CHANNELS, self.initial_features),
+            GeneralConv1D(NUM_CHANNELS, self.initial_features, stride=2),
             nn.ReLU(),
 
-            GeneralConv1D(self.initial_features, self.initial_features * 2),
+            GeneralConv1D(self.initial_features, self.initial_features * 2, stride=2),
             nn.InstanceNorm1d(self.initial_features * 2),
             nn.ReLU(),
             
@@ -82,16 +88,16 @@ class Generator(nn.Module):
             ResnetBlock(self.initial_features * 4))
         
         self.decoder = nn.Sequential(
-            GeneralDeconv1D(self.initial_features * 4, self.initial_features * 2),
+            GeneralDeconv1D(self.initial_features * 4, self.initial_features * 2, stride=2),
             nn.InstanceNorm1d(self.initial_features * 2),
             nn.ReLU(),
 
-            GeneralDeconv1D(self.initial_features * 2, self.initial_features),
+            GeneralDeconv1D(self.initial_features * 2, self.initial_features, stride=2),
             nn.InstanceNorm1d(self.initial_features),
             nn.ReLU(),
 
             GeneralConv1D(self.initial_features, 1),
-            nn.InstanceNorm1d(1),
+            # nn.InstanceNorm1d(1), this could be an issue for audio
             nn.Tanh()
         )
 
