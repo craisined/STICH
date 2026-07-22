@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import torch
 from torch import nn
+from plotter import Plotter
 
 log_handler = logging.FileHandler("model.log", mode="a", encoding="utf-8")
 logging.basicConfig(
@@ -42,12 +43,23 @@ humming_to_classical_optim = torch.optim.Adam(humming_to_classical_gen.parameter
 classical_disc_optim = torch.optim.Adam(classical_disc.parameters(), lr=lr, betas=betas)
 humming_disc_optim = torch.optim.Adam(humming_disc.parameters(), lr=lr, betas=betas)
 
+plotter = Plotter()
+classical_disc_loss_history = []
+humming_disc_loss_history = []
+humming_to_classical_gen_loss_history = []
+classical_to_humming_gen_loss_history = []
+
 epochs = 10
 dataset_length = 14000
 for epoch in range(epochs):
 
     disc_dataloader.reset()
     gen_dataloader.reset()
+    
+    epoch_classical_disc_loss_history = []
+    epoch_humming_disc_loss_history = []
+    epoch_humming_to_classical_gen_loss_history = []
+    epoch_classical_to_humming_gen_loss_history = []
 
     for train_loop in range(dataset_length):
         for disc_updates in range(k):
@@ -74,11 +86,13 @@ for epoch in range(epochs):
             classical_logits = classical_disc(classical_data)
             classical_loss_val = classical_disc_loss(classical_logits, torch.ones_like(classical_logits))
             logger.info(f"Loss for classical discriminator (real): {classical_loss_val}")
+            epoch_classical_disc_loss_history.append(classical_loss_val.item())
             classical_loss_val.backward()
 
             humming_logits = humming_disc(humming_data)
             humming_loss_val = humming_disc_loss(humming_logits, torch.ones_like(humming_logits))
             logger.info(f"Loss for humming discriminator (real): {humming_loss_val}")
+            epoch_humming_disc_loss_history.append(humming_loss_val.item())
             humming_loss_val.backward()
 
             classical_disc_optim.step()
@@ -93,12 +107,34 @@ for epoch in range(epochs):
         classical_output = humming_to_classical_gen(humming_data)
         classical_loss_val = humming_to_classical_loss(classical_output, humming_data)
         logger.info(f"Loss for classical generator: {classical_loss_val}")
+        epoch_humming_to_classical_gen_loss_history.append(classical_loss_val.item())
         classical_loss_val.backward()
 
         humming_output = classical_to_humming_gen(classical_data)
         humming_loss_val = classical_to_humming_loss(humming_output, classical_data)
         logger.info(f"Loss for humming generator: {humming_loss_val}")
+        epoch_classical_to_humming_gen_loss_history.append(humming_loss_val.item())
         humming_loss_val.backward()
 
         classical_to_humming_optim.step()
         humming_to_classical_optim.step()
+        
+    plotter.plotEpochLoss(
+        epoch + 1, 
+        epoch_classical_disc_loss_history, 
+        epoch_humming_disc_loss_history, 
+        epoch_humming_to_classical_gen_loss_history, 
+        epoch_classical_to_humming_gen_loss_history
+    )
+    
+    classical_disc_loss_history.append(sum(epoch_classical_disc_loss_history) / len(epoch_classical_disc_loss_history))
+    humming_disc_loss_history.append(sum(epoch_humming_disc_loss_history) / len(epoch_humming_disc_loss_history))
+    humming_to_classical_gen_loss_history.append(sum(epoch_humming_to_classical_gen_loss_history) / len(epoch_humming_to_classical_gen_loss_history))
+    classical_to_humming_gen_loss_history.append(sum(epoch_classical_to_humming_gen_loss_history) / len(epoch_classical_to_humming_gen_loss_history))
+    
+plotter.plotFullLoss(
+    classical_disc_loss_history,
+    humming_disc_loss_history,
+    humming_to_classical_gen_loss_history,
+    classical_to_humming_gen_loss_history
+)
