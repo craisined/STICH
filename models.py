@@ -125,27 +125,26 @@ class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
         self.nn = nn.Sequential(
-            GeneralConv1D(NUM_CHANNELS, self.initial_features),
+            GeneralConv1D(NUM_CHANNELS, self.initial_features, kernel_size=25, stride=4),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features, self.initial_features * 2),
+            GeneralConv1D(self.initial_features, self.initial_features * 2, kernel_size=25, stride=4),
             nn.InstanceNorm1d(self.initial_features * 2, affine=True),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
+            GeneralConv1D(self.initial_features * 2, self.initial_features * 4, kernel_size=25, stride=4),
             nn.InstanceNorm1d(self.initial_features * 4, affine=True),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features * 4, self.initial_features * 8),
+            GeneralConv1D(self.initial_features * 4, self.initial_features * 8, kernel_size=25, stride=4),
             nn.InstanceNorm1d(self.initial_features * 8, affine=True),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features * 8, 1)
+            GeneralConv1D(self.initial_features * 8, 1, kernel_size=25, stride=1)
         )
 
     def forward(self, x):
-        x = self.nn(x)
-        return x
+        return self.nn(x)
 
 class DiscriminatorLoss(nn.Module):
 
