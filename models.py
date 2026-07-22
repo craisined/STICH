@@ -4,10 +4,11 @@ import torch.nn as nn
 NUM_CHANNELS = 1
 
 class GeneralConv1D(nn.Module):
-    def __init__(self, in_features, out_features, kernel_size=25, stride=1):
+    def __init__(self, in_features, out_features, kernel_size=25, stride=1, padding=None):
         super().__init__()
         kernel_size = kernel_size + (kernel_size - stride) % 2
-        padding = (kernel_size - stride) // 2
+        if padding is None:
+            padding = (kernel_size - stride) // 2
         self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=padding, padding_mode="zeros")
 
     def forward(self, x):
@@ -24,10 +25,11 @@ class GeneralConv2D(nn.Module):
         return conv
 
 class GeneralDeconv1D(nn.Module):
-    def __init__(self, in_features, out_features, kernel_size=25, stride=1):
+    def __init__(self, in_features, out_features, kernel_size=25, stride=1, padding=None):
         super().__init__()
         kernel_size = kernel_size + (kernel_size - stride) % 2
-        padding = (kernel_size - stride) // 2
+        if padding is None:
+            padding = (kernel_size - stride) // 2
         self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=padding, padding_mode="zeros") # TODO: Reflect?
 
     def forward(self, x):
@@ -129,27 +131,26 @@ class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
         self.nn = nn.Sequential(
-            GeneralConv1D(NUM_CHANNELS, self.initial_features),
+            GeneralConv1D(NUM_CHANNELS, self.initial_features, kernel_size=25, stride=4),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features, self.initial_features * 2),
+            GeneralConv1D(self.initial_features, self.initial_features * 2, kernel_size=25, stride=4),
             nn.InstanceNorm1d(self.initial_features * 2, affine=True),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
+            GeneralConv1D(self.initial_features * 2, self.initial_features * 4, kernel_size=25, stride=4),
             nn.InstanceNorm1d(self.initial_features * 4, affine=True),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features * 4, self.initial_features * 8),
+            GeneralConv1D(self.initial_features * 4, self.initial_features * 8, kernel_size=25, stride=4, padding=0),
             nn.InstanceNorm1d(self.initial_features * 8, affine=True),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features * 8, 1)
+            GeneralConv1D(self.initial_features * 8, 1, kernel_size=25, stride=1, padding=0)
         )
 
     def forward(self, x):
-        x = self.nn(x)
-        return x
+        return self.nn(x)
 
 class DiscriminatorLoss(nn.Module):
 

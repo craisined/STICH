@@ -15,5 +15,7 @@ for path in tqdm(input_dict.iterdir(), desc="Creating numpy arrays", unit=" file
     if not path.is_file() or not path.suffix == ".wav":
         continue
     data, sr = librosa.load(path, sr=sampling_rate)
+    data = data[:sampling_rate * 20]
+    data = np.pad(data, (0, sampling_rate * 20 - len(data)), mode='constant', constant_values=0)
     np.save(output_dict / f"sample_{file_number}.npy", data)
     file_number += 1
