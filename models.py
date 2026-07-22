@@ -142,11 +142,11 @@ class Discriminator(nn.Module):
             nn.InstanceNorm1d(self.initial_features * 4, affine=True),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features * 4, self.initial_features * 8, kernel_size=25, stride=4),
+            GeneralConv1D(self.initial_features * 4, self.initial_features * 8, kernel_size=25, stride=4, padding=0),
             nn.InstanceNorm1d(self.initial_features * 8, affine=True),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features * 8, 1, kernel_size=25, stride=1)
+            GeneralConv1D(self.initial_features * 8, 1, kernel_size=25, stride=1, padding=0)
         )
 
     def forward(self, x):
