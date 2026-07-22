@@ -6,10 +6,11 @@ import sys
 import torch
 from torch import nn
 
+log_handler = logging.FileHandler("model.log", mode="a", encoding="utf-8")
 logging.basicConfig(
     level=logging.INFO,
-    stream=sys.stdout,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[log_handler]
 )
 logger = logging.getLogger(__name__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
