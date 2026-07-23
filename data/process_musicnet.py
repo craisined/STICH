@@ -11,8 +11,8 @@ output_dict.mkdir(parents=True, exist_ok=True)
 
 musicnet_sr = 44100
 target_sr = 16000
-clip_seconds = 20
-clip_length = clip_seconds * target_sr    # samples per ~20s clip
+clip_seconds = 10
+clip_length = clip_seconds * target_sr    # samples per ~10s clip
 
 dataset = np.load(input_path, allow_pickle=True, encoding="latin1")
 
