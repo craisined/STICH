@@ -1,4 +1,4 @@
-from dataloader import DataLoader
+from dataloader import DataLoaderLegacy
 import logging
 from models import DiscriminatorLoss, Generator, Discriminator, GeneratorLoss
 from pathlib import Path
@@ -20,8 +20,8 @@ k = 1
 lr = 2e-4
 betas = (0.5, 0.999)
 
-disc_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed", device)
-gen_dataloader = DataLoader(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed", device)
+disc_dataloader = DataLoaderLegacy(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed", device)
+gen_dataloader = DataLoaderLegacy(Path("data") / "humtrans_processed", Path("data") / "musicnet_processed", device)
 
 classical_to_humming_gen = Generator()
 humming_to_classical_gen = Generator()
