@@ -39,14 +39,16 @@ disc_dataloader = DataLoader(
     music_dataset, 
     batch_size=4,
     pin_memory=True, 
-    sampler=disc_sampler
+    sampler=disc_sampler,
+    num_workers=4
 )
 gen_sampler = DistributedSampler(music_dataset, shuffle=True)
 gen_dataloader = DataLoader(
     music_dataset, 
     batch_size=4,
     pin_memory=True, 
-    sampler=gen_sampler
+    sampler=gen_sampler,
+    num_workers=4
 )
 
 # Models
@@ -132,7 +134,7 @@ for epoch in range(epochs):
             humming_loss_val = humming_disc_loss(humming_probs, torch.zeros_like(humming_probs))
         scaler.scale(humming_loss_val).backward()
 
-        if local_rank == 0:
+        if local_rank == 0 and iteration % 50 == 0:
             logger.info(f"Loss for discriminators (fake): {classical_loss_val} (classical) | {humming_loss_val} (humming)")
 
         # Train discriminator with real data
@@ -148,7 +150,7 @@ for epoch in range(epochs):
         epoch_humming_disc_loss_history.append(humming_loss_val.item())
         scaler.scale(humming_loss_val).backward()
 
-        if local_rank == 0:
+        if local_rank == 0 and iteration % 50 == 0:
             logger.info(f"Loss for discriminators (real): {classical_loss_val} (classical) | {humming_loss_val} (humming)")
 
         scaler.step(classical_disc_optim)
@@ -170,7 +172,7 @@ for epoch in range(epochs):
         epoch_classical_to_humming_gen_loss_history.append(humming_loss_val.item())
         scaler.scale(humming_loss_val).backward()
 
-        if local_rank == 0:
+        if local_rank == 0 and iteration % 50 == 0:
             logger.info(f"Loss for generators: {classical_loss_val} (classical) | {humming_loss_val} (humming)")
 
         scaler.step(classical_to_humming_optim)
