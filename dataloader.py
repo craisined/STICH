@@ -3,7 +3,7 @@ import random
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torch.utils.data import DataLoaderLegacy
+from torch.utils.data import DataLoader
 
 class DataLoaderLegacy:
 
@@ -68,7 +68,7 @@ class HummingClassialDataset(Dataset):
         assert self.humming_files_len > self.classical_files_len # not great practice, but who's gonna stop me!
         assert self.classical_files_len > 0
 
-        self.loader = DataLoaderLegacy(self, batch_size=1, shuffle=True)
+        self.loader = DataLoader(self, batch_size=1, shuffle=True)
 
         self.reset()
 
