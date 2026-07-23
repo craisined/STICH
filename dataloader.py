@@ -3,7 +3,6 @@ import random
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
 
 class DataLoaderLegacy:
 
@@ -57,9 +56,8 @@ class DataLoaderLegacy:
 
 class HummingClassialDataset(Dataset):
 
-    def __init__(self, humming_dir, classical_dir, device=None):
+    def __init__(self, humming_dir, classical_dir):
 
-        self.device = device
         self.humming_files = list(Path(humming_dir).glob("*.npy"))
         self.classical_files = list(Path(classical_dir).glob("*.npy"))
         self.humming_files_len = len(self.humming_files)
@@ -67,10 +65,6 @@ class HummingClassialDataset(Dataset):
 
         assert self.humming_files_len > self.classical_files_len # not great practice, but who's gonna stop me!
         assert self.classical_files_len > 0
-
-        self.loader = DataLoader(self, batch_size=1, shuffle=True)
-
-        self.reset()
 
     def __len__(self):
         return self.humming_files_len
@@ -88,16 +82,3 @@ class HummingClassialDataset(Dataset):
         length = sample.shape[-1]
         remainder = length % 4  
         return sample[:, : length - remainder]
-
-    def reset(self):
-        # a fresh iterator reshuffles the humming order (shuffle=True)
-        self._iterator = iter(self.loader)
-
-    def pop(self):
-        try:
-            humming, classical = next(self._iterator)
-        except StopIteration:
-            self.reset()
-            humming, classical = next(self._iterator)
-
-        return humming.to(self.device), classical.to(self.device)
