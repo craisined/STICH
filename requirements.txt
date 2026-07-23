@@ -1,5 +1,6 @@
-intervaltree==3.2.1
-numpy==2.4.6
-librosa==0.11.0
-torch==2.13.0
-tqdm==4.68.4
+intervaltree
+numpy
+librosa
+torch
+tqdm
+matplotlib
