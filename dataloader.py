@@ -66,15 +66,19 @@ class HummingClassicalDataset(Dataset):
         assert self.humming_files_len > self.classical_files_len # not great practice, but who's gonna stop me!
         assert self.classical_files_len > 0
 
-        # preload every clip into ram at the start into memory
-        self.humming = [self._load(path) for path in humming_files]
-        self.classical = [self._load(path) for path in classical_files]
+        # Wrap in torch.stack() to collapse the list of tensors into one massive tensor.
+        # This uses exactly 2 file descriptors for shared memory instead of 28,000.
+        self.humming = torch.stack([self._load(path) for path in humming_files])
+        self.classical = torch.stack([self._load(path) for path in classical_files])
 
     def __len__(self):
         return self.humming_files_len
 
     def __getitem__(self, idx):
-        return self.humming[idx], random.choice(self.classical)
+        # random.choice() acts unpredictably on stacked PyTorch tensors. 
+        # Generate a random integer index instead.
+        classical_idx = random.randint(0, self.classical_files_len - 1)
+        return self.humming[idx], self.classical[classical_idx]
 
     def _load(self, path):
         array = np.load(path).astype(np.float32)

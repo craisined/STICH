@@ -111,7 +111,7 @@ for epoch in range(epochs):
     epoch_humming_to_classical_gen_loss_history = []
     epoch_classical_to_humming_gen_loss_history = []
 
-    for ((humming_disc_data, classical_disc_data), (humming_gen_data, classical_gen_data)) in zip(disc_dataloader, gen_dataloader): 
+    for iteration, ((humming_disc_data, classical_disc_data), (humming_gen_data, classical_gen_data)) in enumerate(zip(disc_dataloader, gen_dataloader)) : 
 
         humming_disc_data = humming_disc_data.to(local_rank)
         classical_disc_data = classical_disc_data.to(local_rank)
