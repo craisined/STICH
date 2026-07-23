@@ -19,6 +19,7 @@ torch.cuda.set_device(local_rank)
 
 # Logging
 if local_rank == 0:
+    logger = logging.getLogger(__name__)
     log_handler = logging.FileHandler("model.log", mode="a", encoding="utf-8")
     logging.basicConfig(
         level=logging.INFO,
