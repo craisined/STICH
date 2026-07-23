@@ -6,6 +6,7 @@ from pathlib import Path
 from plotter import Plotter
 
 import torch
+from torch.amp import autocast, GradScaler
 import torch.distributed as dist
 import torch.optim as optim
 from torch.utils.data import DataLoader
@@ -94,6 +95,9 @@ humming_disc_loss_history = []
 humming_to_classical_gen_loss_history = []
 classical_to_humming_gen_loss_history = []
 
+# AMP: one shared scaler for all optimizers (loss-scaling keeps FP16 grads from underflowing)
+scaler = GradScaler("cuda")
+
 epochs = 10
 for epoch in range(epochs):
 
@@ -116,55 +120,62 @@ for epoch in range(epochs):
         humming_disc_optim.zero_grad()
 
         # Train discriminator with fake data
-        classical_output = humming_to_classical_gen(humming_disc_data).detach()
-        classical_probs = classical_disc(classical_output)
-        classical_loss_val = classical_disc_loss(classical_probs, torch.zeros_like(classical_probs))
-        classical_loss_val.backward()
+        with autocast("cuda"):
+            classical_output = humming_to_classical_gen(humming_disc_data).detach()
+            classical_probs = classical_disc(classical_output)
+            classical_loss_val = classical_disc_loss(classical_probs, torch.zeros_like(classical_probs))
+        scaler.scale(classical_loss_val).backward()
 
-        humming_output = classical_to_humming_gen(classical_disc_data).detach()
-        humming_probs = humming_disc(humming_output)
-        humming_loss_val = humming_disc_loss(humming_probs, torch.zeros_like(humming_probs))
-        humming_loss_val.backward()
+        with autocast("cuda"):
+            humming_output = classical_to_humming_gen(classical_disc_data).detach()
+            humming_probs = humming_disc(humming_output)
+            humming_loss_val = humming_disc_loss(humming_probs, torch.zeros_like(humming_probs))
+        scaler.scale(humming_loss_val).backward()
 
         if local_rank == 0:
             logger.info(f"Loss for discriminators (fake): {classical_loss_val} (classical) | {humming_loss_val} (humming)")
 
         # Train discriminator with real data
-        classical_probs = classical_disc(classical_disc_data)
-        classical_loss_val = classical_disc_loss(classical_probs, torch.ones_like(classical_probs))
+        with autocast("cuda"):
+            classical_probs = classical_disc(classical_disc_data)
+            classical_loss_val = classical_disc_loss(classical_probs, torch.ones_like(classical_probs))
         epoch_classical_disc_loss_history.append(classical_loss_val.item())
-        classical_loss_val.backward()
+        scaler.scale(classical_loss_val).backward()
 
-        humming_probs = humming_disc(humming_disc_data)
-        humming_loss_val = humming_disc_loss(humming_probs, torch.ones_like(humming_probs))
+        with autocast("cuda"):
+            humming_probs = humming_disc(humming_disc_data)
+            humming_loss_val = humming_disc_loss(humming_probs, torch.ones_like(humming_probs))
         epoch_humming_disc_loss_history.append(humming_loss_val.item())
-        humming_loss_val.backward()
+        scaler.scale(humming_loss_val).backward()
 
         if local_rank == 0:
             logger.info(f"Loss for discriminators (real): {classical_loss_val} (classical) | {humming_loss_val} (humming)")
 
-        classical_disc_optim.step()
-        humming_disc_optim.step()
+        scaler.step(classical_disc_optim)
+        scaler.step(humming_disc_optim)
 
         # Train generators
         classical_to_humming_optim.zero_grad()
         humming_to_classical_optim.zero_grad()
 
-        classical_output = humming_to_classical_gen(humming_gen_data)
-        classical_loss_val = humming_to_classical_loss(classical_output, humming_gen_data)
+        with autocast("cuda"):
+            classical_output = humming_to_classical_gen(humming_gen_data)
+            classical_loss_val = humming_to_classical_loss(classical_output, humming_gen_data)
         epoch_humming_to_classical_gen_loss_history.append(classical_loss_val.item())
-        classical_loss_val.backward()
+        scaler.scale(classical_loss_val).backward()
 
-        humming_output = classical_to_humming_gen(classical_gen_data)
-        humming_loss_val = classical_to_humming_loss(humming_output, classical_gen_data)
+        with autocast("cuda"):
+            humming_output = classical_to_humming_gen(classical_gen_data)
+            humming_loss_val = classical_to_humming_loss(humming_output, classical_gen_data)
         epoch_classical_to_humming_gen_loss_history.append(humming_loss_val.item())
-        humming_loss_val.backward()
+        scaler.scale(humming_loss_val).backward()
 
         if local_rank == 0:
             logger.info(f"Loss for generators: {classical_loss_val} (classical) | {humming_loss_val} (humming)")
 
-        classical_to_humming_optim.step()
-        humming_to_classical_optim.step()
+        scaler.step(classical_to_humming_optim)
+        scaler.step(humming_to_classical_optim)
+        scaler.update()
     
     if local_rank == 0:
         plotter.plotEpochLoss(
