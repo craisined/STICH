@@ -58,25 +58,28 @@ class HummingClassialDataset(Dataset):
 
     def __init__(self, humming_dir, classical_dir):
 
-        self.humming_files = list(Path(humming_dir).glob("*.npy"))
-        self.classical_files = list(Path(classical_dir).glob("*.npy"))
-        self.humming_files_len = len(self.humming_files)
-        self.classical_files_len = len(self.classical_files)
+        humming_files = list(Path(humming_dir).glob("*.npy"))
+        classical_files = list(Path(classical_dir).glob("*.npy"))
+        self.humming_files_len = len(humming_files)
+        self.classical_files_len = len(classical_files)
 
         assert self.humming_files_len > self.classical_files_len # not great practice, but who's gonna stop me!
         assert self.classical_files_len > 0
+
+        # preload every clip into ram at the start into memory
+        self.humming = [self._load(path) for path in humming_files]
+        self.classical = [self._load(path) for path in classical_files]
 
     def __len__(self):
         return self.humming_files_len
 
     def __getitem__(self, idx):
-        humming = self._load(self.humming_files[idx])
-        classical = self._load(random.choice(self.classical_files))
-        return self._crop(humming), self._crop(classical)
+        return self.humming[idx], random.choice(self.classical)
 
     def _load(self, path):
         array = np.load(path).astype(np.float32)
-        return torch.from_numpy(array).reshape(1, -1) 
+        tensor = torch.from_numpy(array).reshape(1, -1)  
+        return self._crop(tensor).contiguous()
 
     def _crop(self, sample):
         length = sample.shape[-1]
