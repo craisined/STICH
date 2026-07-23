@@ -54,7 +54,7 @@ class DataLoaderLegacy:
         
         return cropped_sample
 
-class HummingClassialDataset(Dataset):
+class HummingClassicalDataset(Dataset):
 
     def __init__(self, humming_dir, classical_dir):
 
