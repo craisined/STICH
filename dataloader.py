@@ -1,8 +1,11 @@
 from pathlib import Path
 import random
 import numpy as np
+import logging
 import torch
 from torch.utils.data import Dataset
+
+logger = logging.getLogger(__name__)
 
 class DataLoaderLegacy:
 
@@ -68,8 +71,12 @@ class HummingClassicalDataset(Dataset):
 
         # Wrap in torch.stack() to collapse the list of tensors into one massive tensor.
         # This uses exactly 2 file descriptors for shared memory instead of 28,000.
+
+        logger.info("Loading humming data into RAM. This may take a few minutes...")
         self.humming = torch.stack([self._load(path) for path in humming_files])
+        logger.info("Loading classical data into RAM. This may take a few minutes...")
         self.classical = torch.stack([self._load(path) for path in classical_files])
+        logger.info("All audio data successfully loaded and stacked into RAM.")
 
     def __len__(self):
         return self.humming_files_len
