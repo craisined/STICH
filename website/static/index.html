@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STICH — Humming ⇄ Classical</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎼</text></svg>" />
+</head>
+<body>
+
+  <!-- ===== Nav ===== -->
+  <header class="nav">
+    <a class="nav__brand" href="#top">
+      <span class="nav__logo">🎼</span> STICH
+    </a>
+    <nav class="nav__links">
+      <a href="#what">What is it</a>
+      <a href="#how">How it works</a>
+      <a href="#listen">Hear it</a>
+      <a href="#try">Try it</a>
+      <a href="#under">Under the hood</a>
+    </nav>
+  </header>
+
+  <!-- ===== Hero ===== -->
+  <section class="hero" id="top">
+    <div class="hero__inner">
+      <p class="eyebrow">A machine-learning project</p>
+      <h1 class="hero__title">Turn <span class="accent-hum">humming</span> into
+        <span class="accent-cls">classical music</span><span class="hero__dash">—</span>and back.</h1>
+      <p class="hero__sub">
+        STICH is an AI that translates between two musical worlds: the tune you
+        hum and a richer classical rendition of it. Hum a melody, hear it
+        reimagined. Play a classical phrase, hear how someone might hum it.
+      </p>
+      <div class="hero__cta">
+        <a class="btn btn--primary" href="#listen">Hear examples</a>
+        <a class="btn btn--ghost" href="#try">Try it yourself</a>
+      </div>
+      <canvas class="hero__wave" id="heroWave" aria-hidden="true"></canvas>
+    </div>
+  </section>
+
+  <main>
+    <!-- ===== What ===== -->
+    <section class="section" id="what">
+      <div class="section__head">
+        <h2>What is it?</h2>
+        <p class="section__lead">Think of a translator — but for music.</p>
+      </div>
+      <div class="two-col">
+        <div class="prose">
+          <p>
+            When you translate a sentence from English to Spanish, the meaning
+            stays the same but the words change. STICH does the same thing with
+            <strong>music</strong>. It takes a simple hummed melody and re-voices
+            it in a <strong>classical</strong> style — and it can go the other
+            direction too.
+          </p>
+          <p>
+            The clever part: <strong>nobody handed it matched examples</strong>.
+            We never showed it "this exact hum equals this exact classical
+            piece." It learned the <em>style</em> of each world on its own and
+            figured out how to travel between them.
+          </p>
+        </div>
+        <div class="translate-card" aria-hidden="true">
+          <div class="translate-row">
+            <span class="chip chip--hum">🎤 Humming</span>
+            <span class="translate-arrow">→</span>
+            <span class="chip chip--cls">🎻 Classical</span>
+          </div>
+          <div class="translate-row translate-row--rev">
+            <span class="chip chip--cls">🎻 Classical</span>
+            <span class="translate-arrow">→</span>
+            <span class="chip chip--hum">🎤 Humming</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== How ===== -->
+    <section class="section section--alt" id="how">
+      <div class="section__head">
+        <h2>How it works</h2>
+        <p class="section__lead">Two artists and two critics, learning by competing.</p>
+      </div>
+
+      <div class="how-grid">
+        <div class="how-card">
+          <div class="how-card__icon">🎨</div>
+          <h3>The artists</h3>
+          <p>Two AI "composers." One turns humming into classical; the other
+            turns classical into humming.</p>
+        </div>
+        <div class="how-card">
+          <div class="how-card__icon">🧐</div>
+          <h3>The critics</h3>
+          <p>Two AI "judges" try to spot fakes. If a judge can't tell the
+            result from the real thing, the artist is doing well.</p>
+        </div>
+        <div class="how-card">
+          <div class="how-card__icon">🔁</div>
+          <h3>The safety check</h3>
+          <p><em>Cycle-consistency:</em> translate a tune and translate it back —
+            you should get close to the original. That keeps the melody intact.</p>
+        </div>
+      </div>
+
+      <figure class="cycle-diagram">
+        <div class="cycle-diagram__row">
+          <span class="node node--hum">🎤 Humming</span>
+          <span class="edge"><span class="edge__label">artist →</span></span>
+          <span class="node node--cls">🎻 Classical</span>
+          <span class="edge"><span class="edge__label">artist →</span></span>
+          <span class="node node--hum">🎤 Humming again</span>
+        </div>
+        <figcaption>Translate and translate back — the tune should survive the round trip.</figcaption>
+      </figure>
+      <p class="tech-note">
+        In machine-learning terms this is a <strong>CycleGAN</strong>: two
+        generators, two discriminators, trained with adversarial and
+        cycle-consistency losses.
+      </p>
+    </section>
+
+    <!-- ===== Listen ===== -->
+    <section class="section" id="listen">
+      <div class="section__head">
+        <h2>Hear it</h2>
+        <p class="section__lead">Hand-picked before &amp; after clips.</p>
+      </div>
+
+      <h3 class="group-title"><span class="chip chip--hum">🎤 Humming</span>
+        <span class="group-arrow">→</span>
+        <span class="chip chip--cls">🎻 Classical</span></h3>
+      <div class="gallery">
+        <div class="pair-card">
+          <div class="pair-card__title">A gentle tune</div>
+          <div class="player" data-src="/examples/humming_1.wav" data-label="Original hum"></div>
+          <div class="player player--out" data-src="/examples/classical_1.wav" data-label="STICH classical"></div>
+        </div>
+        <div class="pair-card">
+          <div class="pair-card__title">A cheerful melody</div>
+          <div class="player" data-src="/examples/humming_2.wav" data-label="Original hum"></div>
+          <div class="player player--out" data-src="/examples/classical_2.wav" data-label="STICH classical"></div>
+        </div>
+        <div class="pair-card">
+          <div class="pair-card__title">A slow ballad</div>
+          <div class="player" data-src="/examples/humming_3.wav" data-label="Original hum"></div>
+          <div class="player player--out" data-src="/examples/classical_3.wav" data-label="STICH classical"></div>
+        </div>
+      </div>
+
+      <h3 class="group-title"><span class="chip chip--cls">🎻 Classical</span>
+        <span class="group-arrow">→</span>
+        <span class="chip chip--hum">🎤 Humming</span></h3>
+      <div class="gallery">
+        <div class="pair-card">
+          <div class="pair-card__title">Classical phrase A</div>
+          <div class="player" data-src="/examples/classical_4.wav" data-label="Original classical"></div>
+          <div class="player player--out" data-src="/examples/humming_4.wav" data-label="STICH hum"></div>
+        </div>
+        <div class="pair-card">
+          <div class="pair-card__title">Classical phrase B</div>
+          <div class="player" data-src="/examples/classical_5.wav" data-label="Original classical"></div>
+          <div class="player player--out" data-src="/examples/humming_5.wav" data-label="STICH hum"></div>
+        </div>
+      </div>
+
+      <h3 class="group-title">🔁 The round-trip demo</h3>
+      <div class="gallery">
+        <div class="pair-card pair-card--wide">
+          <div class="pair-card__title">Hum → Classical → Hum</div>
+          <div class="cycle-players">
+            <div class="player" data-src="/examples/cycle_hum_in.wav" data-label="1 · Original hum"></div>
+            <div class="player player--out" data-src="/examples/cycle_classical.wav" data-label="2 · As classical"></div>
+            <div class="player" data-src="/examples/cycle_hum_out.wav" data-label="3 · Back to hum"></div>
+          </div>
+          <p class="pair-card__note">Steps 1 and 3 should sound close — that's cycle-consistency at work.</p>
+        </div>
+      </div>
+
+      <p class="placeholder-banner">🔧 These are <strong>placeholder</strong> clips
+        until the trained model is ready. The players and layout are final.</p>
+    </section>
+
+    <!-- ===== Try ===== -->
+    <section class="section section--alt" id="try">
+      <div class="section__head">
+        <h2>Try it yourself</h2>
+        <p class="section__lead">Upload a short clip and hear STICH translate it.</p>
+      </div>
+
+      <div class="try">
+        <form class="try__form" id="convertForm">
+          <div class="try__direction" role="group" aria-label="Direction">
+            <input type="radio" name="direction" id="dir-h2c" value="humming_to_classical" checked />
+            <label for="dir-h2c">🎤 Humming → 🎻 Classical</label>
+            <input type="radio" name="direction" id="dir-c2h" value="classical_to_humming" />
+            <label for="dir-c2h">🎻 Classical → 🎤 Humming</label>
+          </div>
+
+          <label class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" accept="audio/*,.wav" hidden />
+            <span class="dropzone__icon">🎵</span>
+            <span class="dropzone__text" id="dropzoneText">
+              <strong>Choose an audio file</strong> or drop it here
+            </span>
+            <span class="dropzone__hint">A short <code>.wav</code> works best · kept to ~10 seconds</span>
+          </label>
+
+          <button type="submit" class="btn btn--primary btn--full" id="convertBtn" disabled>
+            Convert
+          </button>
+        </form>
+
+        <div class="try__result" id="result" hidden>
+          <div class="result-col">
+            <h4>Your upload</h4>
+            <div class="player" id="inputPlayer" data-label="Input"></div>
+          </div>
+          <div class="result-arrow" id="resultArrow">→</div>
+          <div class="result-col">
+            <h4>STICH output</h4>
+            <div class="result-status" id="resultStatus"></div>
+            <div class="player" id="outputPlayer" data-label="Output" hidden></div>
+            <a class="download-link" id="downloadLink" download="stich_output.wav" hidden>⬇ Download</a>
+          </div>
+        </div>
+
+        <p class="placeholder-banner">🔧 <strong>Experimental &amp; dummy:</strong>
+          the model isn't wired in yet, so the output is a synthesized placeholder —
+          it won't match your upload. The full upload → server → download flow is real.</p>
+      </div>
+    </section>
+
+    <!-- ===== Under the hood ===== -->
+    <section class="section" id="under">
+      <div class="section__head">
+        <h2>Under the hood</h2>
+        <p class="section__lead">For the curious.</p>
+      </div>
+      <div class="facts">
+        <div class="fact">
+          <div class="fact__k">Model</div>
+          <div class="fact__v">CycleGAN — 2 generators + 2 discriminators, 1-D convolutions with ResNet blocks over raw audio.</div>
+        </div>
+        <div class="fact">
+          <div class="fact__k">Humming data</div>
+          <div class="fact__v">HumTrans — thousands of recorded hummed melodies.</div>
+        </div>
+        <div class="fact">
+          <div class="fact__k">Classical data</div>
+          <div class="fact__v">MusicNet — hundreds of classical recordings.</div>
+        </div>
+        <div class="fact">
+          <div class="fact__k">Audio format</div>
+          <div class="fact__v">Mono, 16&nbsp;kHz, processed into 10-second clips.</div>
+        </div>
+        <div class="fact">
+          <div class="fact__k">Training</div>
+          <div class="fact__v">PyTorch, multi-GPU (DDP) with mixed precision.</div>
+        </div>
+        <div class="fact">
+          <div class="fact__k">This site</div>
+          <div class="fact__v">Plain HTML, CSS &amp; JavaScript, with a Flask server for the model.</div>
+        </div>
+      </div>
+
+      <figure class="chart-card">
+        <figcaption>Training loss (illustrative — real plots will replace this)</figcaption>
+        <canvas id="lossChart" width="720" height="300"></canvas>
+        <div class="chart-legend">
+          <span><i class="sw sw--1"></i>Classical critic</span>
+          <span><i class="sw sw--2"></i>Humming critic</span>
+          <span><i class="sw sw--3"></i>Hum→Classical artist</span>
+          <span><i class="sw sw--4"></i>Classical→Hum artist</span>
+        </div>
+      </figure>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p class="footer__brand">🎼 STICH</p>
+    <p>Built by the team as part of the program · Demo Day 2026</p>
+    <p class="footer__muted">Native HTML · CSS · JavaScript · Flask</p>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

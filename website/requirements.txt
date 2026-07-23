@@ -1,0 +1,9 @@
+# Demo website dependencies.
+# Dummy stage needs only Flask; placeholder audio uses the Python stdlib.
+flask
+
+# Needed once the real model is wired into inference.py:
+# torch
+# librosa
+# soundfile
+# numpy
