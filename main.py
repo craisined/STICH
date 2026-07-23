@@ -8,10 +8,13 @@ from plotter import Plotter
 import torch
 from torch.amp import autocast, GradScaler
 import torch.distributed as dist
+import torch.multiprocessing
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
+
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 # GPU & Threads
 dist.init_process_group(backend="nccl")
@@ -34,20 +37,12 @@ music_dataset = HummingClassicalDataset(
     classical_dir=Path("data") / "musicnet_processed"
 )
 
-disc_sampler = DistributedSampler(music_dataset, shuffle=True)
-disc_dataloader = DataLoader(
+sampler = DistributedSampler(music_dataset, shuffle=True)
+dataloader = DataLoader(
     music_dataset, 
     batch_size=4,
     pin_memory=True, 
-    sampler=disc_sampler,
-    num_workers=4
-)
-gen_sampler = DistributedSampler(music_dataset, shuffle=True)
-gen_dataloader = DataLoader(
-    music_dataset, 
-    batch_size=4,
-    pin_memory=True, 
-    sampler=gen_sampler,
+    sampler=sampler,
     num_workers=4
 )
 
@@ -103,33 +98,30 @@ scaler = GradScaler("cuda")
 epochs = 10
 for epoch in range(epochs):
 
-    disc_sampler.set_epoch(epoch)
-    gen_sampler.set_epoch(epoch)
+    sampler.set_epoch(epoch)
 
     epoch_classical_disc_loss_history = []
     epoch_humming_disc_loss_history = []
     epoch_humming_to_classical_gen_loss_history = []
     epoch_classical_to_humming_gen_loss_history = []
 
-    for iteration, ((humming_disc_data, classical_disc_data), (humming_gen_data, classical_gen_data)) in enumerate(zip(disc_dataloader, gen_dataloader)) : 
+    for iteration, (humming_data, classical_data) in enumerate(dataloader) : 
 
-        humming_disc_data = humming_disc_data.to(local_rank)
-        classical_disc_data = classical_disc_data.to(local_rank)
-        humming_gen_data = humming_gen_data.to(local_rank)
-        classical_gen_data = classical_gen_data.to(local_rank)  
+        humming_data = humming_data.to(local_rank)
+        classical_data = classical_data.to(local_rank)
 
         classical_disc_optim.zero_grad()
         humming_disc_optim.zero_grad()
 
         # Train discriminator with fake data
         with autocast("cuda"):
-            classical_output = humming_to_classical_gen(humming_disc_data).detach()
+            classical_output = humming_to_classical_gen(humming_data).detach()
             classical_probs = classical_disc(classical_output)
             classical_loss_val = classical_disc_loss(classical_probs, torch.zeros_like(classical_probs))
         scaler.scale(classical_loss_val).backward()
 
         with autocast("cuda"):
-            humming_output = classical_to_humming_gen(classical_disc_data).detach()
+            humming_output = classical_to_humming_gen(classical_data).detach()
             humming_probs = humming_disc(humming_output)
             humming_loss_val = humming_disc_loss(humming_probs, torch.zeros_like(humming_probs))
         scaler.scale(humming_loss_val).backward()
@@ -139,13 +131,13 @@ for epoch in range(epochs):
 
         # Train discriminator with real data
         with autocast("cuda"):
-            classical_probs = classical_disc(classical_disc_data)
+            classical_probs = classical_disc(classical_data)
             classical_loss_val = classical_disc_loss(classical_probs, torch.ones_like(classical_probs))
         epoch_classical_disc_loss_history.append(classical_loss_val.item())
         scaler.scale(classical_loss_val).backward()
 
         with autocast("cuda"):
-            humming_probs = humming_disc(humming_disc_data)
+            humming_probs = humming_disc(humming_data)
             humming_loss_val = humming_disc_loss(humming_probs, torch.ones_like(humming_probs))
         epoch_humming_disc_loss_history.append(humming_loss_val.item())
         scaler.scale(humming_loss_val).backward()
@@ -161,14 +153,14 @@ for epoch in range(epochs):
         humming_to_classical_optim.zero_grad()
 
         with autocast("cuda"):
-            classical_output = humming_to_classical_gen(humming_gen_data)
-            classical_loss_val = humming_to_classical_loss(classical_output, humming_gen_data)
+            classical_output = humming_to_classical_gen(humming_data)
+            classical_loss_val = humming_to_classical_loss(classical_output, humming_data)
         epoch_humming_to_classical_gen_loss_history.append(classical_loss_val.item())
         scaler.scale(classical_loss_val).backward()
 
         with autocast("cuda"):
-            humming_output = classical_to_humming_gen(classical_gen_data)
-            humming_loss_val = classical_to_humming_loss(humming_output, classical_gen_data)
+            humming_output = classical_to_humming_gen(classical_data)
+            humming_loss_val = classical_to_humming_loss(humming_output, classical_data)
         epoch_classical_to_humming_gen_loss_history.append(humming_loss_val.item())
         scaler.scale(humming_loss_val).backward()
 
@@ -200,5 +192,11 @@ if local_rank == 0:
         humming_to_classical_gen_loss_history,
         classical_to_humming_gen_loss_history
     )
+
+if local_rank == 0:
+    torch.save({
+        'classical_to_humming': classical_to_humming_gen.module.state_dict(),
+        'humming_to_classical': humming_to_classical_gen.module.state_dict()
+    }, "cyclegan_epoch_10.pt")
 
 dist.destroy_process_group()
