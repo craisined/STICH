@@ -4,6 +4,7 @@ from pathlib import Path
 import librosa
 import numpy as np
 from tqdm import tqdm
+import spectrogram
 
 input_dict = Path("data/humtrans")
 output_dict = Path("data/humtrans_processed")
@@ -21,5 +22,7 @@ for path in tqdm(input_dict.iterdir(), desc="Creating numpy arrays", unit=" file
     start_index = librosa.effects.trim(data, top_db=top_db)[1][0]
     data = data[start_index:sampling_rate * clip_seconds]
     data = np.pad(data, (0, sampling_rate * clip_seconds - len(data)), mode='constant', constant_values=0)
-    np.save(output_dict / f"sample_{file_number}.npy", data)
+
+    spectrogram_data = spectrogram.create_spectrogram(data, sr=sampling_rate)
+    np.save(output_dict / f"sample_{file_number}.npy", spectrogram_data)
     file_number += 1

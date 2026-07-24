@@ -4,6 +4,7 @@ from pathlib import Path
 import librosa
 import numpy as np
 from tqdm import tqdm
+import spectrogram
 
 input_path = Path("data/musicnet/musicnet.npz")
 output_dict = Path("data/musicnet_processed")
@@ -26,5 +27,7 @@ for recording_id in tqdm(dataset.files, desc="Creating numpy arrays", unit=" rec
     num_clips = len(audio) // clip_length
     for i in range(num_clips):
         clip = audio[i * clip_length : (i + 1) * clip_length]
-        np.save(output_dict / f"sample_{file_number}.npy", clip)
+
+        clip_spectrogram = spectrogram.create_spectrogram(clip)
+        np.save(output_dict / f"sample_{file_number}.npy", clip_spectrogram)
         file_number += 1
