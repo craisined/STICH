@@ -23,6 +23,6 @@ for path in tqdm(input_dict.iterdir(), desc="Creating numpy arrays", unit=" file
     data = data[start_index:sampling_rate * clip_seconds]
     data = np.pad(data, (0, sampling_rate * clip_seconds - len(data)), mode='constant', constant_values=0)
 
-    spectrogram_data = spectrogram.create_spectrogram(data, sr=sampling_rate)
+    spectrogram_data = spectrogram.create_spectrogram(y=data, sr=sampling_rate, n_fft=2048, hop_length=128, n_mels=128)
     np.save(output_dict / f"sample_{file_number}.npy", spectrogram_data)
     file_number += 1

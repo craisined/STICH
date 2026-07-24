@@ -28,6 +28,6 @@ for recording_id in tqdm(dataset.files, desc="Creating numpy arrays", unit=" rec
     for i in range(num_clips):
         clip = audio[i * clip_length : (i + 1) * clip_length]
 
-        clip_spectrogram = spectrogram.create_spectrogram(clip)
+        clip_spectrogram = spectrogram.create_spectrogram(y=clip, sr=target_sr, n_fft=2048, hop_length=128, n_mels=128)
         np.save(output_dict / f"sample_{file_number}.npy", clip_spectrogram)
         file_number += 1
