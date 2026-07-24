@@ -186,6 +186,14 @@ def main():
                 epoch_classical_to_humming_gen_loss_history
             )
             logger.info(f"EPOCH {epoch}: {classical_disc_loss_avg} (classical disc) | {humming_disc_loss_avg} (humming disc) | {humming_to_classical_gen_loss_avg} (h -> c) | {classical_to_humming_gen_loss_avg} (c -> h)")
+            
+            torch.save(
+                {
+                    'classical_to_humming': classical_to_humming_gen.module.state_dict(),
+                    'humming_to_classical': humming_to_classical_gen.module.state_dict()
+                },
+                f"cyclegan_epoch_{epoch}.pt"
+            )
         
         classical_disc_loss_history.append(classical_disc_loss_avg)
         humming_disc_loss_history.append(humming_disc_loss_avg)
