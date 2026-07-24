@@ -192,6 +192,12 @@ def main():
         humming_to_classical_gen_loss_history.append(humming_to_classical_gen_loss_avg)
         classical_to_humming_gen_loss_history.append(classical_to_humming_gen_loss_avg)
 
+        if local_rank == 0:
+            torch.save({
+                'classical_to_humming': classical_to_humming_gen.module.state_dict(),
+                'humming_to_classical': humming_to_classical_gen.module.state_dict()
+            }, "models/epoch_{epoch}.pt")
+
     if local_rank == 0:
         plotter.plotFullLoss(
             classical_disc_loss_history,
@@ -199,12 +205,6 @@ def main():
             humming_to_classical_gen_loss_history,
             classical_to_humming_gen_loss_history
         )
-
-    if local_rank == 0:
-        torch.save({
-            'classical_to_humming': classical_to_humming_gen.module.state_dict(),
-            'humming_to_classical': humming_to_classical_gen.module.state_dict()
-        }, "cyclegan_epoch_10.pt")
 
     if local_rank == 0:
         dummy = torch.randn(1, 1, 160_000)  # 10 s @ 16 kHz, multiple of 4
@@ -223,8 +223,6 @@ def main():
             dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
             opset_version=17,
         )
-        
-        
     
     dist.destroy_process_group()
 
