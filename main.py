@@ -20,7 +20,6 @@ def main():
     dist.init_process_group(backend="nccl")
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
-    torch.multiprocessing.set_sharing_strategy('file_system')
 
     # Logging
     if local_rank == 0:

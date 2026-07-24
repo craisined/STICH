@@ -10,3 +10,4 @@ __pycache__
 model.log
 plots
 .venv
+nohup.out

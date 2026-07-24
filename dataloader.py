@@ -73,9 +73,9 @@ class HummingClassicalDataset(Dataset):
         # This uses exactly 2 file descriptors for shared memory instead of 28,000.
 
         logger.info("Loading humming data into RAM. This may take a few minutes...")
-        self.humming = torch.stack([self._load(path) for path in humming_files])
+        self.humming = torch.stack([self._load(path) for path in humming_files]).share_memory_()
         logger.info("Loading classical data into RAM. This may take a few minutes...")
-        self.classical = torch.stack([self._load(path) for path in classical_files])
+        self.classical = torch.stack([self._load(path) for path in classical_files]).share_memory_()
         logger.info("All audio data successfully loaded and stacked into RAM.")
 
     def __len__(self):
