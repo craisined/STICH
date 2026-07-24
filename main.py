@@ -44,7 +44,7 @@ def main():
         batch_size=4,
         pin_memory=True, 
         sampler=sampler,
-        num_workers=4
+        num_workers=1
     )
 
     # Models
