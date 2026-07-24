@@ -200,11 +200,6 @@ def main():
         humming_to_classical_gen_loss_history.append(humming_to_classical_gen_loss_avg)
         classical_to_humming_gen_loss_history.append(classical_to_humming_gen_loss_avg)
 
-        if local_rank == 0:
-            torch.save({
-                'classical_to_humming': classical_to_humming_gen.module.state_dict(),
-                'humming_to_classical': humming_to_classical_gen.module.state_dict()
-            }, f"models/epoch_{epoch}.pt")
 
     if local_rank == 0:
         plotter.plotFullLoss(
@@ -215,7 +210,8 @@ def main():
         )
 
     if local_rank == 0:
-        dummy = torch.randn(1, 1, 160_000) 
+
+        dummy = torch.randn(1, 1, 160_000)  # 10 s @ 16 kHz, multiple of 4
         gen = humming_to_classical_gen.module.cpu().eval()
         torch.onnx.export(
             gen, dummy, "humming_to_classical.onnx",
