@@ -18,6 +18,9 @@ class GeneralConv1D(nn.Module):
 class GeneralConv2D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3, stride=1):
         super().__init__()
+        kernel_size = kernel_size + (kernel_size - stride) % 2
+        if padding is None:
+            padding = (kernel_size - stride) // 2
         self.conv = nn.Conv2d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding_mode="reflect") # TODO: padding for 2D
 
     def forward(self, x):
@@ -39,11 +42,29 @@ class GeneralDeconv1D(nn.Module):
 class GeneralDeconv2D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3, stride=1):
         super().__init__()
+        kernel_size = kernel_size + (kernel_size - stride) % 2
         self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding_mode="reflect") # TODO: padding for 2D
 
     def forward(self, x):
         deconv = self.deconv(x)
         return deconv
+    
+class Encoder(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.initial_features = 64
+        self.nn = nn.Sequential(
+            GeneralConv2D(NUM_CHANNELS, self.initial_features, kernel_size=7, stride=1),
+            nn.ReLU(),
+
+            GeneralConv2D(self.initial_features, self.initial_features * 2, kernel_size=3, stride=2),
+            nn.InstanceNorm2d(self.initial_features * 2),
+            nn.ReLU(),
+            
+            GeneralConv2D(self.initial_features * 2, self.initial_features * 4, kernel_size=3, stride=2),
+            nn.InstanceNorm2d(self.initial_features * 4),
+            nn.ReLU()
+        )
 
 class ResnetBlock(nn.Module):
     def __init__(self, num_features):
