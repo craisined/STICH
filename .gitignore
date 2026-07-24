@@ -14,3 +14,5 @@ nohup.out
 website/cyclegan_epoch_10.pt
 data/musicnet_10_wav_samples/*
 models
+website/classical_to_humming.onnx
+website/humming_to_classical.onnx
