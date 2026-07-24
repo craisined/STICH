@@ -68,6 +68,7 @@ class Generator(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
+            nn.InstanceNorm1d(NUM_CHANNELS),
             GeneralConv1D(NUM_CHANNELS, self.initial_features, stride=2),
             nn.ReLU(),
 
@@ -97,8 +98,7 @@ class Generator(nn.Module):
             nn.ReLU(),
 
             GeneralConv1D(self.initial_features, 1),
-            # nn.InstanceNorm1d(1), this could be an issue for audio
-            nn.Tanh()
+            nn.InstanceNorm1d(1, affine=True)
         )
 
     def forward(self, x):
@@ -131,6 +131,7 @@ class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
         self.nn = nn.Sequential(
+            nn.InstanceNorm1d(1),
             GeneralConv1D(NUM_CHANNELS, self.initial_features, kernel_size=25, stride=4),
             nn.LeakyReLU(self.relu_factor),
             
