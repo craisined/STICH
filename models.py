@@ -49,12 +49,12 @@ class ResnetBlock(nn.Module):
     def __init__(self, num_features):
         super().__init__()
         self.resnet = nn.Sequential(
-            GeneralConv1D(num_features, num_features),
-            nn.InstanceNorm1d(num_features),
+            GeneralConv2D(num_features, num_features, kernel_size=3, stride=1),
+            nn.InstanceNorm2d(num_features),
             nn.ReLU(),
 
-            GeneralConv1D(num_features, num_features),
-            nn.InstanceNorm1d(num_features)
+            GeneralConv2D(num_features, num_features, kernel_size=3, stride=1),
+            nn.InstanceNorm2d(num_features)
         )
 
     def forward(self, x):
@@ -68,15 +68,15 @@ class Generator(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
-            GeneralConv1D(NUM_CHANNELS, self.initial_features, stride=2),
+            GeneralConv2D(NUM_CHANNELS, self.initial_features, kernel_size=7, stride=1),
             nn.ReLU(),
 
-            GeneralConv1D(self.initial_features, self.initial_features * 2, stride=2),
-            nn.InstanceNorm1d(self.initial_features * 2),
+            GeneralConv2D(self.initial_features, self.initial_features * 2, kernel_size=3, stride=2),
+            nn.InstanceNorm2d(self.initial_features * 2),
             nn.ReLU(),
             
-            GeneralConv1D(self.initial_features * 2, self.initial_features * 4),
-            nn.InstanceNorm1d(self.initial_features * 4),
+            GeneralConv2D(self.initial_features * 2, self.initial_features * 4, kernel_size=3, stride=2),
+            nn.InstanceNorm2d(self.initial_features * 4),
             nn.ReLU()
         )
         
@@ -85,18 +85,23 @@ class Generator(nn.Module):
             ResnetBlock(self.initial_features * 4),
             ResnetBlock(self.initial_features * 4),
             ResnetBlock(self.initial_features * 4),
-            ResnetBlock(self.initial_features * 4))
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4)
+        )
         
         self.decoder = nn.Sequential(
-            GeneralDeconv1D(self.initial_features * 4, self.initial_features * 2, stride=2),
-            nn.InstanceNorm1d(self.initial_features * 2),
+            GeneralDeconv2D(self.initial_features * 4, self.initial_features * 2, kernel_size=3, stride=2),
+            nn.InstanceNorm2d(self.initial_features * 2),
             nn.ReLU(),
 
-            GeneralDeconv1D(self.initial_features * 2, self.initial_features, stride=2),
-            nn.InstanceNorm1d(self.initial_features),
+            GeneralDeconv2D(self.initial_features * 2, self.initial_features, kernel_size=3, stride=2),
+            nn.InstanceNorm2d(self.initial_features),
             nn.ReLU(),
 
-            GeneralConv1D(self.initial_features, 1),
+            GeneralConv2D(self.initial_features, 1, kernel_size=7, stride=1),
             # nn.InstanceNorm1d(1), this could be an issue for audio
             nn.Tanh()
         )
@@ -131,22 +136,22 @@ class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
         self.nn = nn.Sequential(
-            GeneralConv1D(NUM_CHANNELS, self.initial_features, kernel_size=25, stride=4),
+            GeneralConv2D(NUM_CHANNELS, self.initial_features, kernel_size=4, stride=2),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features, self.initial_features * 2, kernel_size=25, stride=4),
-            nn.InstanceNorm1d(self.initial_features * 2, affine=True),
+            GeneralConv2D(self.initial_features, self.initial_features * 2, kernel_size=4, stride=2),
+            nn.InstanceNorm2d(self.initial_features * 2, affine=True),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features * 2, self.initial_features * 4, kernel_size=25, stride=4),
-            nn.InstanceNorm1d(self.initial_features * 4, affine=True),
+            GeneralConv2D(self.initial_features * 2, self.initial_features * 4, kernel_size=4, stride=2),
+            nn.InstanceNorm2d(self.initial_features * 4, affine=True),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features * 4, self.initial_features * 8, kernel_size=25, stride=4, padding=0),
-            nn.InstanceNorm1d(self.initial_features * 8, affine=True),
+            GeneralConv2D(self.initial_features * 4, self.initial_features * 8, kernel_size=4, stride=1),
+            nn.InstanceNorm2d(self.initial_features * 8, affine=True),
             nn.LeakyReLU(self.relu_factor),
             
-            GeneralConv1D(self.initial_features * 8, 1, kernel_size=25, stride=1, padding=0)
+            GeneralConv2D(self.initial_features * 8, 1, kernel_size=4, stride=1, padding=0)
         )
 
     def forward(self, x):
