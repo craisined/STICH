@@ -14,12 +14,18 @@ file_number = 0
 clip_seconds = 10
 top_db = 40
 
-for path in tqdm(input_dict.iterdir(), desc="Creating numpy arrays", unit=" files"):
-    if not path.is_file() or not path.suffix == ".wav":
-        continue
-    data, sr = librosa.load(path, sr=sampling_rate)
+def process_humming(path, sr):
+    data, sr = librosa.load(path, sr=sr)
     start_index = librosa.effects.trim(data, top_db=top_db)[1][0]
     data = data[start_index:sampling_rate * clip_seconds]
     data = np.pad(data, (0, sampling_rate * clip_seconds - len(data)), mode='constant', constant_values=0)
+    return data
+
+
+for path in tqdm(input_dict.iterdir(), desc="Creating numpy arrays", unit=" files"):
+    if not path.is_file() or not path.suffix == ".wav":
+        continue
+
+    data = process_humming(path, sampling_rate)
     np.save(output_dict / f"sample_{file_number}.npy", data)
     file_number += 1

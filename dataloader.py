@@ -73,9 +73,9 @@ class HummingClassicalDataset(Dataset):
         # This uses exactly 2 file descriptors for shared memory instead of 28,000.
 
         logger.info("Loading humming data into RAM. This may take a few minutes...")
-        self.humming = torch.stack([self._load(path) for path in humming_files]).share_memory_()
+        self.humming = torch.stack([load(path) for path in humming_files]).share_memory_()
         logger.info("Loading classical data into RAM. This may take a few minutes...")
-        self.classical = torch.stack([self._load(path) for path in classical_files]).share_memory_()
+        self.classical = torch.stack([load(path) for path in classical_files]).share_memory_()
         logger.info("All audio data successfully loaded and stacked into RAM.")
 
     def __len__(self):
@@ -87,12 +87,13 @@ class HummingClassicalDataset(Dataset):
         classical_idx = random.randint(0, self.classical_files_len - 1)
         return self.humming[idx], self.classical[classical_idx]
 
-    def _load(self, path):
-        array = np.load(path).astype(np.float32)
-        tensor = torch.from_numpy(array).reshape(1, -1)  
-        return self._crop(tensor).contiguous()
 
-    def _crop(self, sample):
-        length = sample.shape[-1]
-        remainder = length % 4  
-        return sample[:, : length - remainder]
+def load(path):
+    array = np.load(path).astype(np.float32)
+    tensor = torch.from_numpy(array).reshape(1, -1)  
+    return crop(tensor).contiguous()
+
+def crop(sample):
+    length = sample.shape[-1]
+    remainder = length % 4  
+    return sample[:, : length - remainder]
