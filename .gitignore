@@ -11,3 +11,5 @@ model.log
 plots
 .venv
 nohup.out
+website/cyclegan_epoch_10.pt
+data/musicnet_10_wav_samples/*
