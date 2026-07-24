@@ -171,6 +171,12 @@ def main():
             scaler.step(humming_to_classical_optim)
             scaler.update()
         
+
+        classical_disc_loss_avg = sum(epoch_classical_disc_loss_history) / len(epoch_classical_disc_loss_history)
+        humming_disc_loss_avg = sum(epoch_humming_disc_loss_history) / len(epoch_humming_disc_loss_history)
+        humming_to_classical_gen_loss_avg = sum(epoch_humming_to_classical_gen_loss_history) / len(epoch_humming_to_classical_gen_loss_history)
+        classical_to_humming_gen_loss_avg = sum(epoch_classical_to_humming_gen_loss_history) / len(epoch_classical_to_humming_gen_loss_history)
+
         if local_rank == 0:
             plotter.plotEpochLoss(
                 epoch + 1, 
@@ -179,11 +185,12 @@ def main():
                 epoch_humming_to_classical_gen_loss_history, 
                 epoch_classical_to_humming_gen_loss_history
             )
+            logger.info(f"EPOCH {epoch}: {classical_disc_loss_avg} (classical disc) | {humming_disc_loss_avg} (humming disc) | {humming_to_classical_gen_loss_avg} (h -> c) | {classical_to_humming_gen_loss_avg} (c -> h)")
         
-        classical_disc_loss_history.append(sum(epoch_classical_disc_loss_history) / len(epoch_classical_disc_loss_history))
-        humming_disc_loss_history.append(sum(epoch_humming_disc_loss_history) / len(epoch_humming_disc_loss_history))
-        humming_to_classical_gen_loss_history.append(sum(epoch_humming_to_classical_gen_loss_history) / len(epoch_humming_to_classical_gen_loss_history))
-        classical_to_humming_gen_loss_history.append(sum(epoch_classical_to_humming_gen_loss_history) / len(epoch_classical_to_humming_gen_loss_history))
+        classical_disc_loss_history.append(classical_disc_loss_avg)
+        humming_disc_loss_history.append(humming_disc_loss_avg)
+        humming_to_classical_gen_loss_history.append(humming_to_classical_gen_loss_avg)
+        classical_to_humming_gen_loss_history.append(classical_to_humming_gen_loss_avg)
 
     if local_rank == 0:
         plotter.plotFullLoss(
