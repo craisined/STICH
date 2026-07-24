@@ -206,6 +206,26 @@ def main():
             'humming_to_classical': humming_to_classical_gen.module.state_dict()
         }, "cyclegan_epoch_10.pt")
 
+    if local_rank == 0:
+        dummy = torch.randn(1, 1, 160_000)  # 10 s @ 16 kHz, multiple of 4
+        gen = humming_to_classical_gen.module.cpu().eval()
+        torch.onnx.export(
+            gen, dummy, "humming_to_classical.onnx",
+            input_names=["audio"], output_names=["audio_out"],
+            dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
+            opset_version=17,
+        )
+        
+        gen = classical_to_humming_gen.module.cpu().eval()
+        torch.onnx.export(
+            gen, dummy, "classical_to_humming.onnx",
+            input_names=["audio"], output_names=["audio_out"],
+            dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
+            opset_version=17,
+        )
+        
+        
+    
     dist.destroy_process_group()
 
 if __name__=="__main__":
