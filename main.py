@@ -1,3 +1,4 @@
+import argparse
 from dataloader import DataLoaderLegacy, HummingClassicalDataset
 import logging
 from models import DiscriminatorLoss, Generator, Discriminator, GeneratorLoss
