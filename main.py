@@ -192,7 +192,7 @@ def main():
                     'classical_to_humming': classical_to_humming_gen.module.state_dict(),
                     'humming_to_classical': humming_to_classical_gen.module.state_dict()
                 },
-                f"cyclegan_epoch_{epoch}.pt"
+                f"models/cyclegan_epoch_{epoch}.pt"
             )
         
         classical_disc_loss_history.append(classical_disc_loss_avg)
