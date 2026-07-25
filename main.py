@@ -21,6 +21,9 @@ def main():
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
 
+    Path("models").mkdir(parents=True, exist_ok=True)
+    Path("plots").mkdir(parents=True, exist_ok=True)
+
     # Logging
     if local_rank == 0:
         logger = logging.getLogger(__name__)
@@ -40,7 +43,7 @@ def main():
     sampler = DistributedSampler(music_dataset, shuffle=True)
     dataloader = DataLoader(
         music_dataset, 
-        batch_size=8,
+        batch_size=16,
         pin_memory=True, 
         sampler=sampler,
         num_workers=1
@@ -96,6 +99,7 @@ def main():
     scaler = GradScaler("cuda")
 
     epochs = 10
+    iters_per_log = 10
     for epoch in range(epochs):
 
         sampler.set_epoch(epoch)
@@ -142,9 +146,6 @@ def main():
             epoch_humming_disc_loss_history.append(humming_loss_val.item())
             scaler.scale(humming_loss_val).backward()
 
-            if local_rank == 0 and iteration % 50 == 0:
-                logger.info(f"Loss for discriminators (real): {classical_loss_val} (classical) | {humming_loss_val} (humming)")
-
             scaler.step(classical_disc_optim)
             scaler.step(humming_disc_optim)
 
@@ -164,7 +165,9 @@ def main():
             epoch_classical_to_humming_gen_loss_history.append(humming_loss_val.item())
             scaler.scale(humming_loss_val).backward()
 
-            if local_rank == 0 and iteration % 50 == 0:
+            if local_rank == 0 and iteration % iters_per_log == 0:
+                logger.info(f"Loss for discriminators (fake): {classical_loss_val} (classical) | {humming_loss_val} (humming)")
+                logger.info(f"Loss for discriminators (real): {classical_loss_val} (classical) | {humming_loss_val} (humming)")
                 logger.info(f"Loss for generators: {classical_loss_val} (classical) | {humming_loss_val} (humming)")
 
             scaler.step(classical_to_humming_optim)
