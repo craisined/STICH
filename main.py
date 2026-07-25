@@ -130,9 +130,6 @@ def main():
                 humming_loss_val = humming_disc_loss(humming_probs, torch.zeros_like(humming_probs))
             scaler.scale(humming_loss_val).backward()
 
-            if local_rank == 0 and iteration % 50 == 0:
-                logger.info(f"Loss for discriminators (fake): {classical_loss_val} (classical) | {humming_loss_val} (humming)")
-
             # Train discriminator with real data
             with autocast("cuda"):
                 classical_probs = classical_disc(classical_data)
