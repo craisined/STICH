@@ -40,7 +40,7 @@ def main():
     sampler = DistributedSampler(music_dataset, shuffle=True)
     dataloader = DataLoader(
         music_dataset, 
-        batch_size=4,
+        batch_size=8,
         pin_memory=True, 
         sampler=sampler,
         num_workers=1
