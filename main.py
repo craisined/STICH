@@ -84,7 +84,7 @@ def main():
 
     # Plotting
     if local_rank == 0:
-        plotter = Plotter()
+        plotter = Plotter(process_id)
     classical_disc_loss_history = []
     humming_disc_loss_history = []
     humming_to_classical_gen_loss_history = []
