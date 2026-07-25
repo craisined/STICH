@@ -35,12 +35,13 @@ def main():
 
     Path("models").mkdir(parents=True, exist_ok=True)
     Path("plots").mkdir(parents=True, exist_ok=True)
+    Path("logs").mkdir(parents=True, exist_ok=True)
 
     # Logging
     if local_rank == 0:
         logger = logging.getLogger(__name__)
         log_handler = logging.FileHandler(
-            f"model_{process_id}.log", mode="a", encoding="utf-8"
+            f"logs/model_{process_id}.log", mode="w", encoding="utf-8"
         )
         logging.basicConfig(
             level=logging.INFO,
