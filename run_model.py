@@ -1,3 +1,4 @@
+import argparse
 from models import Generator
 from pathlib import Path
 
@@ -8,25 +9,42 @@ import dataloader
 import soundfile as sf
 import numpy as np
 
-num_humming_samples = 14613
-sr = 16000
+Path("output").mkdir(exist_ok=True)
 
-humming_to_classical_gen = Generator()
+def parse_args():
+    parser = argparse.ArgumentParser(allow_abbrev=False)
+    parser.add_argument("--sr", type=int, default=16_000)
+    parser.add_argument("--input-folder", default="data/musicnet_processed")
+    parser.add_argument("--output-class", default="humming")
+    parser.add_argument("--num-samples", type=int, default=5)
+    parser.add_argument("--model-path", default="model.pt")
+    return parser.parse_args()
 
-weights_path = "model.pt"
+args = parse_args()
+
+num_samples = sum(1 for _ in Path(args.input_folder).iterdir())
+sr = args.sr
+
+model = Generator()
+
+weights_path = args.model_path
+name_to_class = {
+    "classical": "humming_to_classical",
+    "humming": "classical_to_humming"
+}
 weights = torch.load(weights_path, weights_only=True, map_location=torch.device('cpu'))
-humming_to_classical_gen.load_state_dict(weights["humming_to_classical"])
+model.load_state_dict(weights[name_to_class[args.output_class]])
 
-for i in range(0, 10):
-    input_file = Path(f"data/humtrans_processed/sample_{random.randint(0,  num_humming_samples)}.npy")
+for i in range(args.num_samples):
+    input_file = Path(args.input_folder) / f"sample_{random.randint(0,  num_samples)}.npy"
     humming_data = dataloader.load(input_file)
 
-    humming_to_classical_gen.eval()
-    output_data = humming_to_classical_gen(humming_data).detach().numpy()
+    model.eval()
+    output_data = model(humming_data).detach().numpy()
 
 
-    humming_np = np.load(input_file).astype(np.float32).reshape(-1, 1)
+    original_np = np.load(input_file).astype(np.float32).reshape(-1, 1)
     output_np = output_data.reshape(-1, 1)
 
-    sf.write(f"output/original_{i}.wav", humming_np, sr)
+    sf.write(f"output/original_{i}.wav", original_np, sr)
     sf.write(f"output/reconstructed_{i}.wav", output_np, sr)

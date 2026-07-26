@@ -10,10 +10,10 @@ data/musicnet_processed/*
 data/test/
 data/musicnet_10_wav_samples/*
 
-website/cyclegan_epoch_10.pt
-website/classical_to_humming.onnx
-website/humming_to_classical.onnx
+*.pt
+*.onnx
 
 plots
 models
 logs
+output
