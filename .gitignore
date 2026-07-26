@@ -14,6 +14,8 @@ website/cyclegan_epoch_10.pt
 website/classical_to_humming.onnx
 website/humming_to_classical.onnx
 
+*.bak
+
 plots
 models
 logs
