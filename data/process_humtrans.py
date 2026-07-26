@@ -20,6 +20,8 @@ def process_humming(path, sr):
     start_index = librosa.effects.trim(data, top_db=top_db)[1][0]
     data = data[start_index:start_index + sampling_rate * clip_seconds]
     data = np.pad(data, (0, sampling_rate * clip_seconds - len(data)), mode='constant', constant_values=0)
+
+    data = spectrogram.create_spectrogram(data, sr=sampling_rate)
     return data
 
 

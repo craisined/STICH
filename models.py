@@ -114,7 +114,7 @@ class Generator(nn.Module):
             nn.InstanceNorm2d(self.initial_features),
             nn.ReLU(),
 
-            GeneralConv2D(self.initial_features, stride=1),
+            GeneralConv2D(self.initial_features, 1, stride=1),
             nn.InstanceNorm2d(1, affine=True))
 
     def forward(self, x):
