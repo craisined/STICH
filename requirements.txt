@@ -2,5 +2,6 @@ intervaltree
 numpy
 librosa
 torch
+onnxscript  # required by torch.onnx.export (dynamo exporter)
 tqdm
 matplotlib
