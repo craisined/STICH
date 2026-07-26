@@ -127,16 +127,12 @@ class GeneratorLoss(nn.Module):
         self.opposing_generator = opposing_generator
         self.cycle_consistency_factor = cycle_consistency_factor
 
-        # self.bce = nn.BCEWithLogitsLoss()
-        self.mse = nn.MSELoss()
         self.l1Loss = nn.L1Loss()
 
-    def forward(self, x, original):
-        disc_logits = self.discriminator(x)
-        # gan_loss = self.bce(disc_logits, torch.ones_like(disc_logits))
-        gan_loss = self.mse(disc_logits, torch.ones_like(disc_logits))
+    def forward(self, gen_data, original):
+        gan_loss = -self.discriminator(gen_data)
         cycle_consistency_loss = self.l1Loss(
-            self.opposing_generator(x), original)
+            self.opposing_generator(gen_data), original)
         return gan_loss + self.cycle_consistency_factor * cycle_consistency_loss
 
 
@@ -178,11 +174,22 @@ class Discriminator(nn.Module):
 
 class DiscriminatorLoss(nn.Module):
 
-    def __init__(self):
+    def __init__(self, gp_factor=10):
         super().__init__()
-        # self.bce = nn.BCEWithLogitsLoss()
-        self.mse = nn.MSELoss()
+        self.gp_factor = gp_factor
 
-    def forward(self, x, original):
-        # return self.bce(x, original)
-        return self.mse(x, original)
+    def forward(self, gen_data, real_data, gen_result, real_result):
+        gan_loss = gen_result - real_result
+        r1 = torch.autograd.grad(
+            outputs=real_result.sum(),
+            inputs=real_data,
+            create_graph=True
+        )[0]
+        r2 = torch.autograd.grad(
+            outputs=fake_result.sum(),
+            inputs=gen_data,
+            create_graph=True
+        )[0]
+        r1 = r1.pow(2).reshape((r1.size(0), -1)).sum(1).mean()
+        r2 = r2.pow(2).reshape((r2.size(0), -1)).sum(1).mean()
+        return gan_loss + 0.5 * self.gp_factor * (r1 + r2)
