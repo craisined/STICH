@@ -53,7 +53,7 @@ class GeneralDeconv2D(nn.Module):
         if padding is None:
             padding = (kernel_size - stride) // 2
         self.deconv = nn.ConvTranspose2d(in_features, out_features, kernel_size=kernel_size,
-                                         stride=stride, padding=padding, padding_mode="reflect")  # TODO: padding for 2D
+                                         stride=stride, padding=padding, padding_mode="zeros")  # TODO: padding for 2D
 
     def forward(self, x):
         deconv = self.deconv(x)
