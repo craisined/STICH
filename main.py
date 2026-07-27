@@ -23,6 +23,8 @@ def parse_args():
     parser.add_argument("--cycle-factor", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--iters-per-log", type=int, default=10)
+    parser.add_argument("--humming-folder", type=int, default="data/humtrans_processed")
+    parser.add_argument("--classical-folder", type=int, default="data/musicnet_processed")
     return parser.parse_args()
 
 
@@ -55,8 +57,8 @@ def main():
 
     # Datasets
     music_dataset = HummingClassicalDataset(
-        humming_dir=Path("data") / "humtrans_processed",
-        classical_dir=Path("data") / "musicnet_processed",
+        humming_dir=Path(args.humming_folder),
+        classical_dir=Path(args.classical_folder),
     )
 
     sampler = DistributedSampler(music_dataset, shuffle=True)
