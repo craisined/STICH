@@ -212,6 +212,13 @@
             <span class="dropzone__hint">A short <code>.wav</code> works best · kept to ~10 seconds</span>
           </label>
 
+          <!-- Revealed by JS only when the browser can record. -->
+          <div class="recorder" id="recorder" hidden>
+            <div class="recorder__or"><span>or</span></div>
+            <button type="button" class="btn btn--ghost" id="recordBtn">🎙 Hum into your mic</button>
+            <span class="recorder__status" id="recordStatus">Records up to 10 seconds</span>
+          </div>
+
           <button type="submit" class="btn btn--primary btn--full" id="convertBtn" disabled>
             Convert
           </button>
@@ -231,9 +238,9 @@
           </div>
         </div>
 
-        <p class="placeholder-banner">🔧 <strong>Experimental &amp; dummy:</strong>
-          the model isn't wired in yet, so the output is a synthesized placeholder —
-          it won't match your upload. The full upload → server → download flow is real.</p>
+        <p class="placeholder-banner">🔧 <strong>Experimental:</strong> your upload
+          really is run through the trained model. It is an early checkpoint, so
+          expect rough output. Clips are trimmed to the first 10 seconds.</p>
       </div>
     </section>
 
