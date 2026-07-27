@@ -3,16 +3,59 @@ from pathlib import Path
 
 import requests
 
+import base64
+import mimetypes
+import requests
+import json
+from pathlib import Path
+
+import os
+from dotenv import load_dotenv
+
 class WebhookBuilder:
+    load_dotenv()
 
     AVATAR_URL_PATH = Path("discord") / "avatar_url.txt"
-    WEBHOOK_URL = "https://discord.com/api/webhooks/1531124590363803848/nqf6ZRkZX0S8Ba_ZhuE4vXeDq-3nvOQfQDrQ9DoGMjqVJeiuyR4c8QUDVTe1qDk5Fbx_"
+    WEBHOOK_URL = os.getenv("WEBHOOK_URL")
     USERNAME = "Stichy"
 
     def __init__(self):
         self.index = 0
         with self.AVATAR_URL_PATH.open() as f:
             self.avatar_urls = [line.strip() for line in f if line.strip()]
+            
+    def update_profile(self, name=None, avatar=None):
+        payload = {}
+        if name is not None:
+            payload["name"] = name
+        if avatar is not None:
+            with open(avatar, "rb") as img_file:
+                img = base64.b64encode(img_file.read()).decode("utf-8")
+            mt = mimetypes.guess_type(avatar)
+            mt = mt if mt else "image/png"
+            payload["avatar"] = f"data:{mt};base64,{img}"
+        requests.patch(self.WEBHOOK_URL, json=payload)
+
+    def send_embed(self, title=None, description=None, image=None):
+        embed = {}
+        if title is not None:
+            embed["title"] = title
+        if description is not None:
+            embed["description"] = description
+        if image is None:
+            print(embed)
+            r = requests.post(self.WEBHOOK_URL, json={"embeds": [embed]})
+        else:
+            extension = Path(image).suffix
+            embed["image"] = {"url": f"attachment://attachment{extension}"}
+            mt = mimetypes.guess_type(image)[0]
+            mt = mt if mt else "image/png"
+            with open(image, "rb") as img_file:
+                files = {
+                    "payload_json": (None, json.dumps({"embeds": [embed]})),
+                    "file": (f"attachment{extension}", img_file, mt),
+                }
+                r = requests.post(self.WEBHOOK_URL, files=files, json=embed)
 
     def post(self, title, description, plot):
         embed_payload = {
