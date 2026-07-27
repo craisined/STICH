@@ -245,6 +245,33 @@ def main():
                 },
                 f"models/cyclegan_{process_id}_{epoch}.pt",
             )
+            
+            try:
+                
+                
+                cpu_generator = Generator()
+                cpu_generator.load_state_dict(humming_to_classical_gen.module.state_dict())
+                cpu_generator.eval()
+                torch.onnx.export(
+                    cpu_generator, torch.randn(1, 1, 160_000), "models/humming_to_classical.onnx",
+                    input_names=["audio"], output_names=["audio_out"],
+                    dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
+                    opset_version=17,
+                    external_data=False,
+                )
+                
+                cpu_generator = Generator()
+                cpu_generator.load_state_dict(classical_to_humming_gen.module.state_dict())
+                cpu_generator.eval()
+                torch.onnx.export(
+                    cpu_generator, torch.randn(1, 1, 160_000), "models/classical_to_humming.onnx",
+                    input_names=["audio"], output_names=["audio_out"],
+                    dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
+                    opset_version=17,
+                    external_data=False,
+                )
+            except Exception:
+                logger.exception(f"ONNX export failed after epoch {epoch}")
 
         classical_disc_loss_history.append(classical_disc_loss_avg)
         humming_disc_loss_history.append(humming_disc_loss_avg)
@@ -260,25 +287,6 @@ def main():
         )
 
     dist.destroy_process_group()
-    if local_rank == 0:
-        dummy = torch.randn(1, 1, 160_000) 
-        gen = humming_to_classical_gen.module.cpu().eval()
-        torch.onnx.export(
-            gen, dummy, "models/humming_to_classical.onnx",
-            input_names=["audio"], output_names=["audio_out"],
-            dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
-            opset_version=17,
-            external_data=False,
-        )
-        
-        gen = classical_to_humming_gen.module.cpu().eval()
-        torch.onnx.export(
-            gen, dummy, "models/classical_to_humming.onnx",
-            input_names=["audio"], output_names=["audio_out"],
-            dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
-            opset_version=17,
-            external_data=False,
-        )
 
 
 if __name__ == "__main__":
