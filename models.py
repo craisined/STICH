@@ -111,7 +111,7 @@ class Generator(nn.Module):
             nn.ReLU(),
 
             GeneralConv1D(self.initial_features, 1),
-            nn.InstanceNorm1d(1, affine=True)
+            nn.Tanh()
         )
 
     def forward(self, x):
