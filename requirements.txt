@@ -5,3 +5,4 @@ torch
 onnxscript  # required by torch.onnx.export (dynamo exporter)
 tqdm
 matplotlib
+torchaudio
