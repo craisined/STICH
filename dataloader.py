@@ -58,3 +58,6 @@ def normalize(sample):
         2 * (sample - lo) / span.clamp(min=1e-6) - 1,
         torch.zeros_like(sample),
     )
+
+def denormalize(sample, lo, hi):
+    return (sample + 1) / 2 * (hi - lo) + lo
