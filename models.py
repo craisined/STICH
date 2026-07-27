@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 NUM_CHANNELS = 1
 
@@ -32,15 +33,26 @@ class GeneralConv2D(nn.Module):
 class GeneralDeconv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=25, stride=1, padding=None):
         super().__init__()
+        
+        self.scale_factor = stride
+        
         kernel_size = kernel_size + (kernel_size - stride) % 2
         if padding is None:
             padding = (kernel_size - stride) // 2
-        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size,
-                                         stride=stride, padding=padding, padding_mode="zeros")  # TODO: Reflect?
+            
+        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size,
+                                         stride=stride, padding=padding, padding_mode="reflect")
 
     def forward(self, x):
-        deconv = self.deconv(x)
-        return deconv
+        if self.scale_factor > 1:
+            x = F.interpolate(
+                x,
+                scale_factor=self.scale_factor,
+                mode="linear",
+                align_corners=False
+            )
+            
+        return self.conv(x)
 
 
 class GeneralDeconv2D(nn.Module):
