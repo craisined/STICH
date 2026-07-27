@@ -155,7 +155,7 @@ def main():
                 )
                 classical_real_disc_loss = classical_loss_val.item()
             epoch_classical_disc_loss_history.append(
-                (classical_real_disc_loss + classical_fake_disc_loss) // 2
+                (classical_real_disc_loss + classical_fake_disc_loss) / 2
             )
             scaler.scale(classical_loss_val).backward()
 
@@ -166,7 +166,7 @@ def main():
                 )
                 humming_real_disc_loss = humming_loss_val.item()
             epoch_humming_disc_loss_history.append(
-                (humming_real_disc_loss + humming_fake_disc_loss) // 2
+                (humming_real_disc_loss + humming_fake_disc_loss) / 2
             )
             scaler.scale(humming_loss_val).backward()
 
