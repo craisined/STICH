@@ -40,8 +40,16 @@ class GeneralDeconv1D(nn.Module):
         if padding is None:
             padding = (kernel_size - stride) // 2
             
-        self.conv = nn.Conv1d(in_features, out_features, kernel_size=kernel_size,
-                                         stride=stride, padding=padding, padding_mode="reflect")
+        conv_padding = padding + 1 if stride > 1 else padding
+            
+        self.conv = nn.Conv1d(
+            in_channels=in_features, 
+            out_channels=out_features, 
+            kernel_size=kernel_size,
+            stride=1, 
+            padding=conv_padding, 
+            padding_mode="reflect"
+        )
 
     def forward(self, x):
         if self.scale_factor > 1:
