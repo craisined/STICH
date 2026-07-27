@@ -86,13 +86,11 @@ class Generator(nn.Module):
             GeneralConv2D(NUM_CHANNELS, self.initial_features, kernel_size=7),
             nn.ReLU(),
 
-            GeneralConv2D(self.initial_features, self.initial_features * 2, kernel_size=3,
-                          stride=2),
+            GeneralConv2D(self.initial_features, self.initial_features * 2, kernel_size=3, stride=2),
             nn.InstanceNorm2d(self.initial_features * 2),
             nn.ReLU(),
             
-            GeneralConv2D(self.initial_features * 2, self.initial_features * 4, kernel_size=3,
-                          stride=2),
+            GeneralConv2D(self.initial_features * 2, self.initial_features * 4, kernel_size=3, stride=2),
             nn.InstanceNorm2d(self.initial_features * 4),
             nn.ReLU())
 
@@ -104,18 +102,16 @@ class Generator(nn.Module):
             ResnetBlock(self.initial_features * 4))
 
         self.decoder = nn.Sequential(
-            GeneralDeconv2D(self.initial_features * 4,
-                            self.initial_features * 2, stride=2),
+            GeneralDeconv2D(self.initial_features * 4, self.initial_features * 2, stride=2),
             nn.InstanceNorm2d(self.initial_features * 2),
             nn.ReLU(),
 
-            GeneralDeconv2D(self.initial_features * 2,
-                            self.initial_features, stride=2),
+            GeneralDeconv2D(self.initial_features * 2, self.initial_features, stride=2),
             nn.InstanceNorm2d(self.initial_features),
             nn.ReLU(),
 
             GeneralConv2D(self.initial_features, 1, stride=1),
-            nn.InstanceNorm2d(1, affine=True))
+            nn.Tanh())
 
     def forward(self, x):
         return self.decoder(self.transformer(self.encoder(x)))
@@ -123,7 +119,7 @@ class Generator(nn.Module):
 
 class GeneratorLoss(nn.Module):
 
-    def __init__(self, discriminator, opposing_generator, cycle_consistency_factor=10):
+    def __init__(self, discriminator, opposing_generator, cycle_consistency_factor=2):
         super().__init__()
         self.discriminator = discriminator
         self.opposing_generator = opposing_generator
@@ -151,25 +147,22 @@ class Discriminator(nn.Module):
         super().__init__()
         self.nn = nn.Sequential(
             nn.InstanceNorm2d(NUM_CHANNELS),
-            GeneralConv2D(NUM_CHANNELS, self.initial_features),
+            GeneralConv2D(NUM_CHANNELS, self.initial_features, stride=2),
             nn.LeakyReLU(self.relu_factor),
 
-            GeneralConv2D(self.initial_features,
-                          self.initial_features * 2),
+            GeneralConv2D(self.initial_features, self.initial_features * 2, stride=2),
             nn.InstanceNorm2d(self.initial_features * 2, affine=True),
             nn.LeakyReLU(self.relu_factor),
 
-            GeneralConv2D(self.initial_features * 2,
-                          self.initial_features * 4),
+            GeneralConv2D(self.initial_features * 2, self.initial_features * 4, stride=2),
             nn.InstanceNorm2d(self.initial_features * 4, affine=True),
             nn.LeakyReLU(self.relu_factor),
 
-            GeneralConv2D(self.initial_features * 4,
-                          self.initial_features * 8),
+            GeneralConv2D(self.initial_features * 4, self.initial_features * 8, stride=1),
             nn.InstanceNorm2d(self.initial_features * 8, affine=True),
             nn.LeakyReLU(self.relu_factor),
 
-            GeneralConv2D(self.initial_features * 8, 1, padding=0)
+            GeneralConv2D(self.initial_features * 8, 1, stride=1, padding=0)
         )
 
     def forward(self, x):
