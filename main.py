@@ -18,10 +18,15 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 def parse_args():
     parser = argparse.ArgumentParser(allow_abbrev=False)
-    parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--lr", type=float, default=2e-4)
-    parser.add_argument("--cycle-factor", type=int, default=10)
+    parser.add_argument("--cycle-factor", type=int, default=2)
+    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--iters-per-log", type=int, default=10)
+    parser.add_argument("--humming-folder", type=int, default="data/humtrans_processed")
+    parser.add_argument("--classical-folder", type=int, default="data/musicnet_processed")
     return parser.parse_args()
+
 
 def main():
 
@@ -52,13 +57,13 @@ def main():
 
     # Datasets
     music_dataset = HummingClassicalDataset(
-        humming_dir=Path("data") / "humtrans_processed",
-        classical_dir=Path("data") / "musicnet_processed",
+        humming_dir=Path(args.humming_folder),
+        classical_dir=Path(args.classical_folder),
     )
 
     sampler = DistributedSampler(music_dataset, shuffle=True)
     dataloader = DataLoader(
-        music_dataset, batch_size=16, pin_memory=True, sampler=sampler, num_workers=1
+        music_dataset, batch_size=args.batch_size, pin_memory=True, sampler=sampler, num_workers=1
     )
 
     # Models
@@ -108,7 +113,7 @@ def main():
     scaler = GradScaler("cuda")
 
     epochs = args.epochs
-    iters_per_log = 10
+    iters_per_log = args.iters_per_log
     for epoch in range(epochs):
 
         sampler.set_epoch(epoch)
@@ -133,6 +138,7 @@ def main():
                 classical_loss_val = classical_disc_loss(
                     classical_probs, torch.zeros_like(classical_probs)
                 )
+                classical_fake_disc_loss = classical_loss_val.item()
             scaler.scale(classical_loss_val).backward()
 
             with autocast("cuda"):
@@ -141,6 +147,7 @@ def main():
                 humming_loss_val = humming_disc_loss(
                     humming_probs, torch.zeros_like(humming_probs)
                 )
+                humming_fake_disc_loss = humming_loss_val.item()
             scaler.scale(humming_loss_val).backward()
 
             # Train discriminator with real data
@@ -149,7 +156,10 @@ def main():
                 classical_loss_val = classical_disc_loss(
                     classical_probs, torch.ones_like(classical_probs)
                 )
-            epoch_classical_disc_loss_history.append(classical_loss_val.item())
+                classical_real_disc_loss = classical_loss_val.item()
+            epoch_classical_disc_loss_history.append(
+                (classical_real_disc_loss + classical_fake_disc_loss) / 2
+            )
             scaler.scale(classical_loss_val).backward()
 
             with autocast("cuda"):
@@ -157,7 +167,10 @@ def main():
                 humming_loss_val = humming_disc_loss(
                     humming_probs, torch.ones_like(humming_probs)
                 )
-            epoch_humming_disc_loss_history.append(humming_loss_val.item())
+                humming_real_disc_loss = humming_loss_val.item()
+            epoch_humming_disc_loss_history.append(
+                (humming_real_disc_loss + humming_fake_disc_loss) / 2
+            )
             scaler.scale(humming_loss_val).backward()
 
             scaler.step(classical_disc_optim)
@@ -172,9 +185,8 @@ def main():
                 classical_loss_val = humming_to_classical_loss(
                     classical_output, humming_data
                 )
-            epoch_humming_to_classical_gen_loss_history.append(
-                classical_loss_val.item()
-            )
+                classical_gen_loss = classical_loss_val.item()
+            epoch_humming_to_classical_gen_loss_history.append(classical_gen_loss)
             scaler.scale(classical_loss_val).backward()
 
             with autocast("cuda"):
@@ -182,18 +194,19 @@ def main():
                 humming_loss_val = classical_to_humming_loss(
                     humming_output, classical_data
                 )
-            epoch_classical_to_humming_gen_loss_history.append(humming_loss_val.item())
+                humming_gen_loss = humming_loss_val.item()
+            epoch_classical_to_humming_gen_loss_history.append(humming_gen_loss)
             scaler.scale(humming_loss_val).backward()
 
             if local_rank == 0 and iteration % iters_per_log == 0:
                 logger.info(
-                    f"Loss for discriminators (fake): {classical_loss_val} (classical) | {humming_loss_val} (humming)"
+                    f"Loss for discriminators (fake): {classical_fake_disc_loss} (classical) | {humming_fake_disc_loss} (humming)"
                 )
                 logger.info(
-                    f"Loss for discriminators (real): {classical_loss_val} (classical) | {humming_loss_val} (humming)"
+                    f"Loss for discriminators (real): {classical_real_disc_loss} (classical) | {humming_real_disc_loss} (humming)"
                 )
                 logger.info(
-                    f"Loss for generators: {classical_loss_val} (classical) | {humming_loss_val} (humming)"
+                    f"Loss for generators: {classical_gen_loss} (classical) | {humming_gen_loss} (humming)"
                 )
 
             scaler.step(classical_to_humming_optim)
@@ -247,6 +260,25 @@ def main():
         )
 
     dist.destroy_process_group()
+    if local_rank == 0:
+        dummy = torch.randn(1, 1, 160_000) 
+        gen = humming_to_classical_gen.module.cpu().eval()
+        torch.onnx.export(
+            gen, dummy, "models/humming_to_classical.onnx",
+            input_names=["audio"], output_names=["audio_out"],
+            dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
+            opset_version=17,
+            external_data=False,
+        )
+        
+        gen = classical_to_humming_gen.module.cpu().eval()
+        torch.onnx.export(
+            gen, dummy, "models/classical_to_humming.onnx",
+            input_names=["audio"], output_names=["audio_out"],
+            dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
+            opset_version=17,
+            external_data=False,
+        )
 
 
 if __name__ == "__main__":
