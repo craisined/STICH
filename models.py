@@ -34,32 +34,41 @@ class GeneralDeconv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=25, stride=1, padding=None):
         super().__init__()
         
-        self.scale_factor = stride
+        self.stride = stride
         
-        kernel_size = kernel_size + (kernel_size - stride) % 2
+        self.kernel_size = kernel_size + (kernel_size - stride) % 2
         if padding is None:
-            padding = (kernel_size - stride) // 2
-            
-        conv_padding = padding + 1 if stride > 1 else padding
+            padding = (self.kernel_size - stride) // 2
+        self.padding = padding
             
         self.conv = nn.Conv1d(
             in_channels=in_features, 
             out_channels=out_features, 
-            kernel_size=kernel_size,
+            kernel_size=self.kernel_size,
             stride=1, 
-            padding=conv_padding, 
-            padding_mode="reflect"
+            padding=0 
         )
 
     def forward(self, x):
-        if self.scale_factor > 1:
+        L_in = x.size(-1)
+        L_target = (L_in - 1) * self.stride - 2 * self.padding + self.kernel_size
+        
+        if self.stride > 1:
             x = F.interpolate(
                 x,
-                scale_factor=self.scale_factor,
+                scale_factor=self.stride,
                 mode="linear",
                 align_corners=False
             )
             
+        L_interp = x.size(-1)
+        total_padding = L_target + self.kernel_size - 1 - L_interp
+        
+        pad_left = total_padding // 2
+        pad_right = total_padding - pad_left
+        
+        x = F.pad(x, (pad_left, pad_right), mode="reflect")
+        
         return self.conv(x)
 
 
