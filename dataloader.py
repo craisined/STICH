@@ -41,9 +41,20 @@ class HummingClassicalDataset(Dataset):
 def load(path):
     array = np.load(path).astype(np.float32)
     tensor = torch.from_numpy(array).reshape(1, -1)  
-    return crop(tensor).contiguous()
+    return normalize(crop(tensor)).contiguous()
 
 def crop(sample):
     length = sample.shape[-1]
     remainder = length % 4  
     return sample[:, : length - remainder]
+
+def normalize(sample):
+    
+    lo = sample.amin(dim=-1, keepdim=True)
+    hi = sample.amax(dim=-1, keepdim=True)
+    span = hi - lo
+    return torch.where(
+        span > 1e-6,
+        2 * (sample - lo) / span.clamp(min=1e-6) - 1,
+        torch.zeros_like(sample),
+    )
