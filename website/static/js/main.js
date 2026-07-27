@@ -245,6 +245,10 @@
     const status = document.getElementById("resultStatus");
     const outWrap = document.getElementById("outputPlayer");
     const downloadLink = document.getElementById("downloadLink");
+    const recorderBox = document.getElementById("recorder");
+    const recordBtn = document.getElementById("recordBtn");
+    const recStatus = document.getElementById("recordStatus");
+    const hummingRadio = document.getElementById("dir-h2c");
 
     const inputPlayer = new AudioPlayer(document.getElementById("inputPlayer"));
     const outputPlayer = new AudioPlayer(outWrap);
@@ -269,6 +273,113 @@
       const f = e.dataTransfer.files[0];
       if (f) { fileInput.files = e.dataTransfer.files; setFile(f); }
     });
+
+    /* ===== Record from the mic =====
+       MediaRecorder hands back webm/opus (mp4 on Safari), which the server's
+       decoder cannot read. So decode it here and re-encode as a plain PCM
+       WAV — from that point it is indistinguishable from an uploaded file. */
+    const MAX_SECONDS = 10; // the model only ever sees the first 10 s
+    let mediaRec = null;
+    let chunks = [];
+    let stopTimer = null;
+    let tickTimer = null;
+
+    function setRecStatus(text, isError = false) {
+      recStatus.textContent = text;
+      recStatus.classList.toggle("is-error", isError);
+    }
+
+    function resetRecordBtn() {
+      recordBtn.classList.remove("is-recording");
+      recordBtn.textContent = "🎙 Hum into your mic";
+      clearInterval(tickTimer);
+      clearTimeout(stopTimer);
+    }
+
+    async function startRecording() {
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          // Voice-call processing chews up hummed notes — keep it raw.
+          audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        });
+      } catch {
+        setRecStatus("Microphone blocked. Allow access and try again.", true);
+        return;
+      }
+
+      chunks = [];
+      mediaRec = new MediaRecorder(stream);
+      mediaRec.addEventListener("dataavailable", (e) => { if (e.data.size) chunks.push(e.data); });
+      mediaRec.addEventListener("stop", async () => {
+        stream.getTracks().forEach((t) => t.stop()); // release the mic indicator
+        const mimeType = mediaRec.mimeType;
+        mediaRec = null;
+        resetRecordBtn();
+        setRecStatus("Encoding…");
+        try {
+          setFile(await toWavFile(new Blob(chunks, { type: mimeType })));
+          hummingRadio.checked = true; // they just hummed, so default that way
+          setRecStatus("Recorded — press Convert.");
+        } catch (err) {
+          setRecStatus(`⚠ ${err.message}`, true);
+        }
+      });
+
+      mediaRec.start();
+      const startedAt = Date.now();
+      recordBtn.classList.add("is-recording");
+      recordBtn.textContent = "⏹ Stop";
+      const tick = () => {
+        const left = MAX_SECONDS - Math.floor((Date.now() - startedAt) / 1000);
+        setRecStatus(`Recording… ${Math.max(0, left)}s left`);
+      };
+      tick();
+      tickTimer = setInterval(tick, 250);
+      stopTimer = setTimeout(stopRecording, MAX_SECONDS * 1000);
+    }
+
+    function stopRecording() {
+      if (mediaRec && mediaRec.state !== "inactive") mediaRec.stop();
+    }
+
+    async function toWavFile(blob) {
+      if (!blob.size) throw new Error("Nothing was recorded.");
+      const decoded = await getCtx().decodeAudioData(await blob.arrayBuffer());
+      if (!decoded.length) throw new Error("The recording was empty.");
+      const wav = encodeWav(decoded.getChannelData(0), decoded.sampleRate);
+      return new File([wav], "recording.wav", { type: "audio/wav" });
+    }
+
+    // Minimal 16-bit PCM WAV container. Left at the mic's own sample rate —
+    // the server resamples to 16 kHz the same way it does for any upload.
+    function encodeWav(samples, sampleRate) {
+      const bytes = samples.length * 2;
+      const view = new DataView(new ArrayBuffer(44 + bytes));
+      const ascii = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+      ascii(0, "RIFF");
+      view.setUint32(4, 36 + bytes, true);
+      ascii(8, "WAVEfmt ");
+      view.setUint32(16, 16, true); // fmt chunk size
+      view.setUint16(20, 1, true); // PCM
+      view.setUint16(22, 1, true); // mono
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true); // byte rate
+      view.setUint16(32, 2, true); // block align
+      view.setUint16(34, 16, true); // bits per sample
+      ascii(36, "data");
+      view.setUint32(40, bytes, true);
+      for (let i = 0; i < samples.length; i++) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(44 + i * 2, s * 32767, true);
+      }
+      return new Blob([view.buffer], { type: "audio/wav" });
+    }
+
+    if (navigator.mediaDevices?.getUserMedia && window.MediaRecorder) {
+      recorderBox.hidden = false;
+      recordBtn.addEventListener("click", () => (mediaRec ? stopRecording() : startRecording()));
+    }
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -300,7 +411,7 @@
         lastOutUrl = URL.createObjectURL(blob);
 
         status.className = "result-status";
-        status.textContent = "Done (placeholder audio).";
+        status.textContent = "Done.";
         outWrap.hidden = false;
         outputPlayer.setSrc(lastOutUrl);
         downloadLink.href = lastOutUrl;

@@ -82,7 +82,6 @@ class Generator(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.InstanceNorm2d(NUM_CHANNELS),
             GeneralConv2D(NUM_CHANNELS, self.initial_features, kernel_size=7),
             nn.ReLU(),
 
@@ -146,7 +145,6 @@ class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
         self.nn = nn.Sequential(
-            nn.InstanceNorm2d(NUM_CHANNELS),
             GeneralConv2D(NUM_CHANNELS, self.initial_features, stride=2),
             nn.LeakyReLU(self.relu_factor),
 

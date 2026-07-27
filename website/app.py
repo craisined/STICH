@@ -2,13 +2,15 @@
 STICH demo — Flask server.
 
 Serves the static demo site and exposes a single inference endpoint,
-POST /api/convert, which currently returns a DUMMY generated audio clip
-(see inference.py). Swapping in the trained model later is a one-function
-change inside inference.py; this file does not need to change.
+POST /api/convert, which runs the uploaded clip through the exported ONNX
+generator for the requested direction (see inference.py).
 
-Run:
-    ./.venv/bin/python app.py
+Run (from the repo root, using the repo venv):
+    ./.venv/bin/python website/app.py
 then open http://127.0.0.1:5000
+
+Port 5000 is taken by AirPlay Receiver on macOS. If it is in use:
+    ./.venv/bin/python -m flask --app website/app.py run --port 5001
 """
 import io
 from pathlib import Path
@@ -46,8 +48,18 @@ def convert():
     if not audio_bytes:
         return jsonify(error="The uploaded file is empty."), 400
 
-    # DUMMY for now: ignores the input and returns a synthesized clip.
-    wav_bytes = inference.convert(audio_bytes, direction, filename=upload.filename)
+    try:
+        wav_bytes = inference.convert(audio_bytes, direction, filename=upload.filename)
+    except FileNotFoundError as exc:
+        # No exported .onnx to run -- a setup problem, not a bad upload.
+        app.logger.error("model unavailable: %s", exc)
+        return jsonify(error=str(exc)), 503
+    except ValueError as exc:
+        # Bad upload -- the message is written for the person who chose it.
+        return jsonify(error=str(exc)), 400
+    except Exception:
+        app.logger.exception("conversion failed")
+        return jsonify(error="Something went wrong converting that file."), 500
 
     return send_file(
         io.BytesIO(wav_bytes),

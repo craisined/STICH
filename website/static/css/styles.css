@@ -347,6 +347,36 @@ code {
 .dropzone__hint { font-size: 0.82rem; color: var(--muted); }
 .dropzone.has-file { border-style: solid; border-color: var(--hum); }
 
+.recorder { display: grid; justify-items: center; gap: 0.7rem; }
+.recorder__or {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.recorder__or::before, .recorder__or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.recorder__status { font-size: 0.82rem; color: var(--muted); min-height: 1.2em; text-align: center; }
+.recorder__status.is-error { color: #ff8f8f; }
+#recordBtn.is-recording {
+  border-color: var(--hum);
+  color: var(--hum-soft);
+  background: rgba(139, 123, 240, 0.14);
+  animation: rec-pulse 1.4s ease-in-out infinite;
+}
+@keyframes rec-pulse {
+  50% { box-shadow: 0 0 0 6px rgba(139, 123, 240, 0.14); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #recordBtn.is-recording { animation: none; }
+}
+
 .try__result {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
