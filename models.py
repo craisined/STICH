@@ -181,15 +181,15 @@ class DiscriminatorLoss(nn.Module):
     def forward(self, gen_data, real_data, gen_result, real_result):
         gan_loss = gen_result.mean() - real_result.mean()
         r1 = torch.autograd.grad(
-            outputs=real_result.sum(),
+            outputs=real_result.mean(),
             inputs=real_data,
             create_graph=True
         )[0]
         r2 = torch.autograd.grad(
-            outputs=gen_result.sum(),
+            outputs=gen_result.mean(),
             inputs=gen_data,
             create_graph=True
         )[0]
-        r1 = r1.pow(2).reshape((r1.size(0), -1)).sum(1).mean()
-        r2 = r2.pow(2).reshape((r2.size(0), -1)).sum(1).mean()
+        r1 = r1.pow(2).reshape((r1.size(0), -1)).mean(1).mean()
+        r2 = r2.pow(2).reshape((r2.size(0), -1)).mean(1).mean()
         return gan_loss + 0.5 * self.gp_factor * (r1 + r2)

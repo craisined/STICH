@@ -131,8 +131,8 @@ def main():
 
         for iteration, (humming_data, classical_data) in enumerate(dataloader):
 
-            humming_data = humming_data.to(local_rank).requires_grad_()
-            classical_data = classical_data.to(local_rank).requires_grad_()
+            humming_data = humming_data.to(local_rank).float().requires_grad_()
+            classical_data = classical_data.to(local_rank).float().requires_grad_()
 
             classical_disc_optim.zero_grad()
             humming_disc_optim.zero_grad()
@@ -141,8 +141,8 @@ def main():
                 classical_gen_no_grad = humming_to_classical_gen(humming_data)
                 humming_gen_no_grad = classical_to_humming_gen(classical_data)
 
-            classical_gen = classical_gen_no_grad.detach().requires_grad_()
-            humming_gen = humming_gen_no_grad.detach().requires_grad_()
+            classical_gen = classical_gen_no_grad.float().detach().requires_grad_()
+            humming_gen = humming_gen_no_grad.float().detach().requires_grad_()
 
             with autocast("cuda"):
                 c_gen_disc = classical_disc(classical_gen)
@@ -151,14 +151,14 @@ def main():
                 h_real_disc = humming_disc(humming_data)
 
             classical_loss_val = classical_disc_loss(
-                classical_gen.float(),
-                classical_data.float(),
+                classical_gen,
+                classical_data,
                 c_gen_disc.float(),
                 c_real_disc.float(),
             )
             humming_loss_val = humming_disc_loss(
-                humming_gen.float(),
-                humming_data.float(),
+                humming_gen,
+                humming_data,
                 h_gen_disc.float(),
                 h_real_disc.float(),
             )
