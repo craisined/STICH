@@ -12,6 +12,7 @@ data/musicnet_10_wav_samples/*
 
 *.pt
 *.onnx
+*.bak
 
 plots
 models
