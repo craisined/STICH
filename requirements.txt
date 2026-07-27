@@ -4,5 +4,6 @@ numpy
 librosa
 torch
 onnxscript
+onnxruntime
 tqdm
 matplotlib
