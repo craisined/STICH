@@ -131,46 +131,25 @@ def main():
             classical_disc_optim.zero_grad()
             humming_disc_optim.zero_grad()
 
-            # Train discriminator with fake data
+            # Train discriminators
             with autocast("cuda"):
-                classical_output = humming_to_classical_gen(humming_data).detach()
-                classical_probs = classical_disc(classical_output)
+                classical_gen = humming_to_classical_gen(humming_data).detach()
+                gen_disc = classical_disc(classical_gen)
+                real_disc = classical_disc(classical_data)
                 classical_loss_val = classical_disc_loss(
-                    classical_probs, torch.zeros_like(classical_probs)
+                    classical_gen, classical_data, gen_disc, real_disc
                 )
-                classical_fake_disc_loss = classical_loss_val.item()
+                classical_disc_loss = classical_loss_val.item()
             scaler.scale(classical_loss_val).backward()
 
             with autocast("cuda"):
-                humming_output = classical_to_humming_gen(classical_data).detach()
-                humming_probs = humming_disc(humming_output)
+                humming_gen = classical_to_humming(classical_data).detach()
+                gen_disc = humming_disc(humming_gen)
+                real_disc = humming_disc(humming_data)
                 humming_loss_val = humming_disc_loss(
-                    humming_probs, torch.zeros_like(humming_probs)
+                    humming_gen, humming_data, gen_disc, real_disc
                 )
-                humming_fake_disc_loss = humming_loss_val.item()
-            scaler.scale(humming_loss_val).backward()
-
-            # Train discriminator with real data
-            with autocast("cuda"):
-                classical_probs = classical_disc(classical_data)
-                classical_loss_val = classical_disc_loss(
-                    classical_probs, torch.ones_like(classical_probs)
-                )
-                classical_real_disc_loss = classical_loss_val.item()
-            epoch_classical_disc_loss_history.append(
-                (classical_real_disc_loss + classical_fake_disc_loss) / 2
-            )
-            scaler.scale(classical_loss_val).backward()
-
-            with autocast("cuda"):
-                humming_probs = humming_disc(humming_data)
-                humming_loss_val = humming_disc_loss(
-                    humming_probs, torch.ones_like(humming_probs)
-                )
-                humming_real_disc_loss = humming_loss_val.item()
-            epoch_humming_disc_loss_history.append(
-                (humming_real_disc_loss + humming_fake_disc_loss) / 2
-            )
+                humming_disc_loss = humming_loss_val.item()
             scaler.scale(humming_loss_val).backward()
 
             scaler.step(classical_disc_optim)
