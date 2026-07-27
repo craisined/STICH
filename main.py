@@ -23,8 +23,10 @@ def parse_args():
     parser.add_argument("--cycle-factor", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--iters-per-log", type=int, default=10)
-    parser.add_argument("--humming-folder", type=int, default="data/humtrans_processed")
-    parser.add_argument("--classical-folder", type=int, default="data/musicnet_processed")
+    parser.add_argument("--humming-folder", type=str, default="data/humtrans_processed")
+    parser.add_argument(
+        "--classical-folder", type=str, default="data/musicnet_processed"
+    )
     return parser.parse_args()
 
 
@@ -63,7 +65,11 @@ def main():
 
     sampler = DistributedSampler(music_dataset, shuffle=True)
     dataloader = DataLoader(
-        music_dataset, batch_size=args.batch_size, pin_memory=True, sampler=sampler, num_workers=1
+        music_dataset,
+        batch_size=args.batch_size,
+        pin_memory=True,
+        sampler=sampler,
+        num_workers=1,
     )
 
     # Models
@@ -125,32 +131,44 @@ def main():
 
         for iteration, (humming_data, classical_data) in enumerate(dataloader):
 
-            humming_data = humming_data.to(local_rank)
-            classical_data = classical_data.to(local_rank)
+            humming_data = humming_data.to(local_rank).requires_grad_()
+            classical_data = classical_data.to(local_rank).requires_grad_()
 
             classical_disc_optim.zero_grad()
             humming_disc_optim.zero_grad()
 
-            # Train discriminators
-            with autocast("cuda"):
-                classical_gen = humming_to_classical_gen(humming_data).detach()
-                gen_disc = classical_disc(classical_gen)
-                real_disc = classical_disc(classical_data)
-                classical_loss_val = classical_disc_loss(
-                    classical_gen, classical_data, gen_disc, real_disc
-                )
-                classical_disc_loss = classical_loss_val.item()
-            scaler.scale(classical_loss_val).backward()
+            with torch.no_grad(), autocast("cuda"):
+                classical_gen_no_grad = humming_to_classical_gen(humming_data)
+                humming_gen_no_grad = classical_to_humming_gen(classical_data)
+
+            classical_gen = classical_gen_no_grad.detach().requires_grad_()
+            humming_gen = humming_gen_no_grad.detach().requires_grad_()
 
             with autocast("cuda"):
-                humming_gen = classical_to_humming(classical_data).detach()
-                gen_disc = humming_disc(humming_gen)
-                real_disc = humming_disc(humming_data)
-                humming_loss_val = humming_disc_loss(
-                    humming_gen, humming_data, gen_disc, real_disc
-                )
-                humming_disc_loss = humming_loss_val.item()
-            scaler.scale(humming_loss_val).backward()
+                c_gen_disc = classical_disc(classical_gen)
+                c_real_disc = classical_disc(classical_data)
+                h_gen_disc = humming_disc(humming_gen)
+                h_real_disc = humming_disc(humming_data)
+
+            classical_loss_val = classical_disc_loss(
+                classical_gen.float(),
+                classical_data.float(),
+                c_gen_disc.float(),
+                c_real_disc.float(),
+            )
+            humming_loss_val = humming_disc_loss(
+                humming_gen.float(),
+                humming_data.float(),
+                h_gen_disc.float(),
+                h_real_disc.float(),
+            )
+
+            classical_disc_loss_val = classical_loss_val.item()
+            humming_disc_loss_val = humming_loss_val.item()
+            epoch_classical_disc_loss_history.append(classical_disc_loss_val)
+            epoch_humming_disc_loss_history.append(humming_disc_loss_val)
+
+            scaler.scale(classical_loss_val + humming_loss_val).backward()
 
             scaler.step(classical_disc_optim)
             scaler.step(humming_disc_optim)
@@ -164,33 +182,30 @@ def main():
                 classical_loss_val = humming_to_classical_loss(
                     classical_output, humming_data
                 )
-                classical_gen_loss = classical_loss_val.item()
-            epoch_humming_to_classical_gen_loss_history.append(classical_gen_loss)
-            scaler.scale(classical_loss_val).backward()
 
-            with autocast("cuda"):
                 humming_output = classical_to_humming_gen(classical_data)
                 humming_loss_val = classical_to_humming_loss(
                     humming_output, classical_data
                 )
-                humming_gen_loss = humming_loss_val.item()
-            epoch_classical_to_humming_gen_loss_history.append(humming_gen_loss)
-            scaler.scale(humming_loss_val).backward()
 
-            if local_rank == 0 and iteration % iters_per_log == 0:
-                logger.info(
-                    f"Loss for discriminators (fake): {classical_fake_disc_loss} (classical) | {humming_fake_disc_loss} (humming)"
-                )
-                logger.info(
-                    f"Loss for discriminators (real): {classical_real_disc_loss} (classical) | {humming_real_disc_loss} (humming)"
-                )
-                logger.info(
-                    f"Loss for generators: {classical_gen_loss} (classical) | {humming_gen_loss} (humming)"
-                )
+                classical_gen_loss = classical_loss_val.item()
+                humming_gen_loss = humming_loss_val.item()
+
+            epoch_humming_to_classical_gen_loss_history.append(classical_gen_loss)
+            epoch_classical_to_humming_gen_loss_history.append(humming_gen_loss)
+            scaler.scale(classical_loss_val + humming_loss_val).backward()
 
             scaler.step(classical_to_humming_optim)
             scaler.step(humming_to_classical_optim)
             scaler.update()
+
+            if local_rank == 0 and iteration % iters_per_log == 0:
+                logger.info(
+                    f"Loss for discriminators: {classical_disc_loss_val} (classical) | {humming_disc_loss_val} (humming)"
+                )
+                logger.info(
+                    f"Loss for generators: {classical_gen_loss} (classical) | {humming_gen_loss} (humming)"
+                )
 
         classical_disc_loss_avg = sum(epoch_classical_disc_loss_history) / len(
             epoch_classical_disc_loss_history
@@ -240,20 +255,26 @@ def main():
 
     dist.destroy_process_group()
     if local_rank == 0:
-        dummy = torch.randn(1, 1, 160_000) 
+        dummy = torch.randn(1, 1, 160_000)
         gen = humming_to_classical_gen.module.cpu().eval()
         torch.onnx.export(
-            gen, dummy, "models/humming_to_classical.onnx",
-            input_names=["audio"], output_names=["audio_out"],
+            gen,
+            dummy,
+            "models/humming_to_classical.onnx",
+            input_names=["audio"],
+            output_names=["audio_out"],
             dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
             opset_version=17,
             external_data=False,
         )
-        
+
         gen = classical_to_humming_gen.module.cpu().eval()
         torch.onnx.export(
-            gen, dummy, "models/classical_to_humming.onnx",
-            input_names=["audio"], output_names=["audio_out"],
+            gen,
+            dummy,
+            "models/classical_to_humming.onnx",
+            input_names=["audio"],
+            output_names=["audio_out"],
             dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
             opset_version=17,
             external_data=False,

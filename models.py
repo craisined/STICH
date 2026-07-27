@@ -130,7 +130,7 @@ class GeneratorLoss(nn.Module):
         self.l1Loss = nn.L1Loss()
 
     def forward(self, gen_data, original):
-        gan_loss = -self.discriminator(gen_data)
+        gan_loss = -self.discriminator(gen_data).mean()
         cycle_consistency_loss = self.l1Loss(
             self.opposing_generator(gen_data), original)
         return gan_loss + self.cycle_consistency_factor * cycle_consistency_loss
@@ -179,14 +179,14 @@ class DiscriminatorLoss(nn.Module):
         self.gp_factor = gp_factor
 
     def forward(self, gen_data, real_data, gen_result, real_result):
-        gan_loss = gen_result - real_result
+        gan_loss = gen_result.mean() - real_result.mean()
         r1 = torch.autograd.grad(
             outputs=real_result.sum(),
             inputs=real_data,
             create_graph=True
         )[0]
         r2 = torch.autograd.grad(
-            outputs=fake_result.sum(),
+            outputs=gen_result.sum(),
             inputs=gen_data,
             create_graph=True
         )[0]
