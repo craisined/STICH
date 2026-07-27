@@ -22,6 +22,7 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--cycle-factor", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--iters-per-log", type=int, default=10)
     return parser.parse_args()
 
 
@@ -110,7 +111,7 @@ def main():
     scaler = GradScaler("cuda")
 
     epochs = args.epochs
-    iters_per_log = 10
+    iters_per_log = args.iters_per_log
     for epoch in range(epochs):
 
         sampler.set_epoch(epoch)
