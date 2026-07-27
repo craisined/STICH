@@ -22,6 +22,9 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--cycle-factor", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--iters-per-log", type=int, default=10)
+    parser.add_argument("--humming-folder", type=int, default="data/humtrans_processed")
+    parser.add_argument("--classical-folder", type=int, default="data/musicnet_processed")
     return parser.parse_args()
 
 
@@ -54,8 +57,8 @@ def main():
 
     # Datasets
     music_dataset = HummingClassicalDataset(
-        humming_dir=Path("data") / "humtrans_processed",
-        classical_dir=Path("data") / "musicnet_processed",
+        humming_dir=Path(args.humming_folder),
+        classical_dir=Path(args.classical_folder),
     )
 
     sampler = DistributedSampler(music_dataset, shuffle=True)
@@ -110,7 +113,7 @@ def main():
     scaler = GradScaler("cuda")
 
     epochs = args.epochs
-    iters_per_log = 10
+    iters_per_log = args.iters_per_log
     for epoch in range(epochs):
 
         sampler.set_epoch(epoch)
@@ -257,6 +260,25 @@ def main():
         )
 
     dist.destroy_process_group()
+    if local_rank == 0:
+        dummy = torch.randn(1, 1, 160_000) 
+        gen = humming_to_classical_gen.module.cpu().eval()
+        torch.onnx.export(
+            gen, dummy, "models/humming_to_classical.onnx",
+            input_names=["audio"], output_names=["audio_out"],
+            dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
+            opset_version=17,
+            external_data=False,
+        )
+        
+        gen = classical_to_humming_gen.module.cpu().eval()
+        torch.onnx.export(
+            gen, dummy, "models/classical_to_humming.onnx",
+            input_names=["audio"], output_names=["audio_out"],
+            dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
+            opset_version=17,
+            external_data=False,
+        )
 
 
 if __name__ == "__main__":
