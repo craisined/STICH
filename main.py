@@ -5,6 +5,7 @@ from models import DiscriminatorLoss, Generator, Discriminator, GeneratorLoss
 import os
 from pathlib import Path
 from plotter import Plotter
+from webhook import WebhookBuilder
 
 import torch
 from torch.amp import autocast, GradScaler
@@ -105,6 +106,9 @@ def main():
     humming_disc_loss_history = []
     humming_to_classical_gen_loss_history = []
     classical_to_humming_gen_loss_history = []
+    
+    # Webhook
+    webhook = WebhookBuilder()
 
     # AMP: one shared scaler for all optimizers (loss-scaling keeps FP16 grads from underflowing)
     scaler = GradScaler("cuda")
@@ -241,6 +245,12 @@ def main():
                     "humming_to_classical": humming_to_classical_gen.module.state_dict(),
                 },
                 f"models/cyclegan_{process_id}_{epoch}.pt",
+            )
+            
+            webhook.post(
+                title=f"✅ Epoch {epoch} of Process ID {process_id} Completed",
+                description=f"### Average Loss\n- Classical Discriminator: {classical_disc_loss_avg}\n- Humming Discriminator: {humming_disc_loss_avg}\n- Humming to Classical:{humming_to_classical_gen_loss_avg}\n- Classical to Humming:{classical_to_humming_gen_loss_avg}",
+                plot="plots" / f"{process_id}_epoch{epoch}.png"
             )
 
         classical_disc_loss_history.append(classical_disc_loss_avg)
