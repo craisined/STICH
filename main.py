@@ -264,7 +264,7 @@ def main():
         dummy = torch.randn(1, 1, 160_000) 
         gen = humming_to_classical_gen.module.cpu().eval()
         torch.onnx.export(
-            gen, dummy, "humming_to_classical.onnx",
+            gen, dummy, "models/humming_to_classical.onnx",
             input_names=["audio"], output_names=["audio_out"],
             dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
             opset_version=17,
@@ -273,7 +273,7 @@ def main():
         
         gen = classical_to_humming_gen.module.cpu().eval()
         torch.onnx.export(
-            gen, dummy, "classical_to_humming.onnx",
+            gen, dummy, "models/classical_to_humming.onnx",
             input_names=["audio"], output_names=["audio_out"],
             dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
             opset_version=17,
