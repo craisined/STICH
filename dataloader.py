@@ -40,10 +40,5 @@ class HummingClassicalDataset(Dataset):
 
 def load(path):
     array = np.load(path).astype(np.float32)
-    tensor = torch.from_numpy(array.reshape(1, 128, 1251))
-    return crop(tensor).contiguous()
-
-def crop(sample):
-    length = sample.shape[-1]
-    remainder = length % 4  
-    return sample[:, : length - remainder]
+    tensor = torch.from_numpy(array.reshape(1, 128, 1251)) # also bad practice, its so parsover
+    return tensor[:, :, :1248]
