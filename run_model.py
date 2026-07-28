@@ -36,16 +36,16 @@ weights = torch.load(weights_path, weights_only=True, map_location=torch.device(
 model.load_state_dict(weights[name_to_class[args.output_class]])
 
 for i in range(args.num_samples):
-    input_file = Path(args.input_folder) / f"sample_{random.randint(0,  num_samples)}.npy"
+    input_file = Path(args.input_folder) / f"sample_{random.randint(0, num_samples - 1)}.npy"
     raw = torch.from_numpy(np.load(input_file).astype(np.float32)).reshape(1, -1)
     raw = dataloader.crop(raw)
-    input_data, lo, hi = dataloader.normalize(raw)
+    input_data, scale = dataloader.normalize(raw)
 
     model.eval()
     output_data = model(input_data).detach()
 
     original_np = raw.numpy().reshape(-1, 1)
-    output_np = dataloader.denormalize(output_data, lo, hi).numpy().reshape(-1, 1)
+    output_np = dataloader.denormalize(output_data, scale).numpy().reshape(-1, 1)
 
     sf.write(f"output/original_{i}.wav", original_np, sr)
     sf.write(f"output/reconstructed_{i}.wav", output_np, sr)

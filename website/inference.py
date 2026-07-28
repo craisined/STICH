@@ -21,8 +21,14 @@ import numpy as np
 import onnxruntime
 
 SAMPLE_RATE = 16000
-CLIP_SAMPLES = 10 * SAMPLE_RATE  # every training clip was exactly this long
+CLIP_SAMPLES = 10 * SAMPLE_RATE  # longest clip we feed the generator
+MIN_SAMPLES = SAMPLE_RATE  # below ~1 s there is not enough context to convert
 TRIM_TOP_DB = 40  # matches data/process_humtrans.py
+TARGET_RMS = 0.1  # matches dataloader.TARGET_RMS
+PEAK_CEILING = 0.99  # matches dataloader.PEAK_CEILING
+# models.TOTAL_STRIDE. Duplicated rather than imported: this module stays free
+# of torch so the demo survives training-code changes (see module docstring).
+TOTAL_STRIDE = 32
 OUTPUT_PEAK = 0.9  # target peak amplitude, leaving a little headroom
 
 BASE = Path(__file__).parent
@@ -70,27 +76,37 @@ def _preprocess(audio_bytes, direction):
         raise ValueError("That file contains no audio.")
 
     if direction == "humming_to_classical":
-        # process_humtrans.py drops everything before the first sound, then
-        # slices to CLIP_SAMPLES of the *original* timeline -- so a late start
-        # means a shorter clip, not a shifted window. Kept identical here.
-        start = librosa.effects.trim(audio, top_db=TRIM_TOP_DB)[1][0]
-        audio = audio[start:CLIP_SAMPLES]
-    else:
-        # process_musicnet.py takes plain 10 s slices, no trimming.
-        audio = audio[:CLIP_SAMPLES]
+        # process_humtrans.py trims silence off both ends. No zero-padding here
+        # either: the model never saw digital silence during training.
+        _, (start, end) = librosa.effects.trim(audio, top_db=TRIM_TOP_DB)
+        audio = audio[start:end]
 
-    if len(audio) < CLIP_SAMPLES:
-        audio = np.pad(audio, (0, CLIP_SAMPLES - len(audio)))
+    audio = audio[:CLIP_SAMPLES]
 
-    return audio.astype(np.float32).reshape(1, 1, -1)
+    # The encoder downsamples by TOTAL_STRIDE and the decoder undoes it exactly,
+    # so a length off the grid comes back the wrong size.
+    audio = audio[: len(audio) - len(audio) % TOTAL_STRIDE]
+
+    if len(audio) < MIN_SAMPLES:
+        raise ValueError("That clip is too short. Try at least a second of audio.")
+
+    return _normalize(audio).astype(np.float32).reshape(1, 1, -1)
+
+
+def _normalize(audio):
+    """RMS normalize with a peak guard -- matches dataloader.normalize."""
+    rms = float(np.sqrt(np.mean(np.square(audio))))
+    peak = float(np.abs(audio).max())
+    if rms <= 1e-6:
+        raise ValueError("That clip is silent.")
+    return audio * min(TARGET_RMS / max(rms, 1e-8), PEAK_CEILING / max(peak, 1e-8))
 
 
 def _postprocess(generated):
     """Flatten to mono and scale into WAV range."""
     audio = np.nan_to_num(np.asarray(generated).reshape(-1))
-    # The generator ends in InstanceNorm1d (models.py) with no bounding
-    # nonlinearity, so its output is not confined to [-1, 1] -- normalize
-    # rather than let the 16-bit encoder clip the waveform flat.
+    # The generator ends in Tanh, so output is already inside [-1, 1] but
+    # typically well short of full scale. Rescale so the demo is audible.
     peak = np.abs(audio).max()
     if peak > 0:
         audio = audio * (OUTPUT_PEAK / peak)

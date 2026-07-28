@@ -1,5 +1,5 @@
 import argparse
-from dataloader import HummingClassicalDataset
+from dataloader import HummingClassicalDataset, SAMPLE_RATE
 import logging
 from models import DiscriminatorLoss, Generator, Discriminator, GeneratorLoss
 import os
@@ -20,8 +20,12 @@ def parse_args():
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--lr", type=float, default=2e-4)
-    parser.add_argument("--cycle-factor", type=int, default=2)
+    # Spectral cycle loss sits around 8 at init where waveform L1 sat around
+    # 0.3, so this is not comparable to the old default. Sweep 2/5/10.
+    parser.add_argument("--cycle-factor", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--crop-seconds", type=int, default=2)
+    parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--iters-per-log", type=int, default=10)
     parser.add_argument("--humming-folder", type=str, default="data/humtrans_processed")
     parser.add_argument(
@@ -61,6 +65,7 @@ def main():
     music_dataset = HummingClassicalDataset(
         humming_dir=Path(args.humming_folder),
         classical_dir=Path(args.classical_folder),
+        crop_length=args.crop_seconds * SAMPLE_RATE,
     )
 
     sampler = DistributedSampler(music_dataset, shuffle=True)
@@ -69,7 +74,7 @@ def main():
         batch_size=args.batch_size,
         pin_memory=True,
         sampler=sampler,
-        num_workers=1,
+        num_workers=args.num_workers,
     )
 
     # Models
