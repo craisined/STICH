@@ -64,5 +64,4 @@ for i in range(num_tests):
     input_file = Path(input_folder) / f"sample_{random.randint(0, num_files)}.npy"
     input_numpy = np.load(input_file)
 
-    output_numpy = wav_to_wav(input_numpy)
-    sf.write(f"output/original.wav", original_numpy, model_sr)
+    output_numpy = wav_to_wav(input_numpy, input_is_humming)
