@@ -63,7 +63,7 @@ def invert_spectrogram(mel_spec_db, sr=16000, n_fft=2048, hop_length=128, n_mels
     y_reconstructed = griffin_lim(linear_spec_power)
     
     # Detach from graph (if needed), move to CPU, and convert to numpy array
-    return y_reconstructed.detach().cpu().numpy()
+    return y_reconstructed.detach().cpu().numpy().reshape(-1, 1)
 
 def create_spectrogram_image(mel_spec_db, file_name, sr=16000, hop_length=128):
     plt.figure(figsize=(10, 4))

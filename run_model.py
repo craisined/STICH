@@ -47,8 +47,8 @@ for i in range(args.num_samples):
     output_data = model(input_data).detach()
 
 
-    original_np = spectrogram.invert_spectrogram(np.load(input_file)).reshape(-1, 1)
-    output_np = dataloader.denormalize(spectrogram.invert_spectrogram(output_data), lo, hi).reshape(-1, 1)
+    original_np = spectrogram.invert_spectrogram(np.load(input_file))
+    output_np = dataloader.denormalize(spectrogram.invert_spectrogram(output_data), lo, hi)
 
     sf.write(f"output/original_{i}.wav", original_np, sr)
     sf.write(f"output/reconstructed_{i}.wav", output_np, sr)
