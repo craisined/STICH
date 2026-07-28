@@ -96,17 +96,21 @@ def main():
     lr = args.lr
     betas = (0.5, 0.999)
 
-    # .to() matters here: GeneratorLoss holds the STFT window buffers.
+    # Do NOT call .to() on these. GeneratorLoss registers the discriminator and
+    # the opposing generator as submodules, and both are already DDP-wrapped --
+    # moving a DDP module after construction invalidates its gradient buckets
+    # and segfaults. The STFT window follows the audio's device instead, see
+    # STFTLoss.magnitude().
     classical_to_humming_loss = GeneratorLoss(
         humming_disc,
         humming_to_classical_gen,
         cycle_consistency_factor=args.cycle_factor,
-    ).to(local_rank)
+    )
     humming_to_classical_loss = GeneratorLoss(
         classical_disc,
         classical_to_humming_gen,
         cycle_consistency_factor=args.cycle_factor,
-    ).to(local_rank)
+    )
     classical_disc_loss, humming_disc_loss = DiscriminatorLoss(), DiscriminatorLoss()
     classical_to_humming_optim = optim.Adam(
         classical_to_humming_gen.parameters(), lr=lr, betas=betas
