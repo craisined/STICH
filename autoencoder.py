@@ -1,3 +1,12 @@
+import torch
+import torchaudio
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+model_path = "musicnet.ts"
+model = torch.jit.load(model_path, map_location=device)
+model.eval()
+
 def generate_humming_embedding():
     pass
 
