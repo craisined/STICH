@@ -102,7 +102,7 @@ class ResnetBlock(nn.Module):
 
 class Generator(nn.Module):
 
-    initial_features = 32
+    initial_features = 64
 
     def __init__(self):
         super().__init__()
@@ -126,7 +126,12 @@ class Generator(nn.Module):
             ResnetBlock(self.initial_features * 4),
             ResnetBlock(self.initial_features * 4),
             ResnetBlock(self.initial_features * 4),
-            ResnetBlock(self.initial_features * 4))
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+            ResnetBlock(self.initial_features * 4),
+        )
 
         self.decoder = nn.Sequential(
             GeneralDeconv1D(self.initial_features * 4,
