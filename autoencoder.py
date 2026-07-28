@@ -20,7 +20,7 @@ def generate_embedding(folder):
     for file in folder.iterdir():
         audio_data = torch.from_numpy(np.load(file)).reshape(1, 1, -1)
         with torch.no_grad():
-            vector_sum += model.encode(audio_data)
+            vector_sum += model.encode(resample(audio_data))
         count += 1
     return vector_sum / count
 
@@ -36,5 +36,12 @@ def classical_to_humming_embedding(audio_embedding):
 def resample(arr):
     return torchaudio.transforms.Resample(orig_freq=16000, new_freq=48000)
 
-def numpy_to_wav(arr):
-    sf.write(f"output/original.wav", arr, audio_sr)
+# takes in 48khz embedding
+def numpy_to_wav(embedding, to_humming=True):
+    original_numpy = model.decode(embedding)
+    sf.write(f"output/original.wav", original_numpy, model_sr)
+
+    output_embedding = classical_to_humming_embedding(embedding) if to_humming else humming_to_classical_embedding(embedding)
+    output_numpy = model.decode(output_embedding)
+    sf.write(f"output/output.wav", output_numpy, model_sr)
+
