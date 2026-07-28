@@ -36,11 +36,6 @@ def generate_class_embedding(folder):
         count += 1
     return vector_sum / count
 
-humming_embedding = generate_class_embedding(Path("data/humtrans_processed"))
-classical_embedding = generate_class_embedding(Path("data/musicnet_processed"))
-np.save("humming_embedding.npy", humming_embedding)
-np.save("classical_embedding.npy", classical_embedding)
-
 def humming_to_classical_embedding(audio_embedding):
     return audio_embedding - humming_embedding + classical_embedding
 
@@ -57,6 +52,15 @@ def wav_to_wav(audio_data, to_humming=True):
 
 wav_to_wav("data/humtrans_processed/sample_0.npy")
 
+def save_embeddings():
+    humming_embedding = generate_class_embedding(Path("data/humtrans_processed"))
+    classical_embedding = generate_class_embedding(Path("data/musicnet_processed"))
+    np.save("humming_embedding.npy", humming_embedding)
+    np.save("classical_embedding.npy", classical_embedding)
+
+
+humming_embedding = np.load("humming_embedding.npy")
+classical_embedding = np.load("classical_embedding.npy")
 
 num_tests = 10
 num_files = 12000
