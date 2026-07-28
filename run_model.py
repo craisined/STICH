@@ -40,10 +40,8 @@ for i in range(args.num_samples):
     input_file = Path(args.input_folder) / f"sample_{random.randint(0,  num_samples)}.npy"
     raw = torch.from_numpy(np.load(input_file).astype(np.float32)).reshape(1, -1)
 
-    raw = dataloader.crop(raw)
-    lo = raw.amin(dim=-1, keepdim=True).numpy()
-    hi = raw.amax(dim=-1, keepdim=True).numpy()
-    input_data = dataloader.normalize(raw).reshape(1, 128, -1)[:, :, :1248].contiguous()
+    raw = dataloader.crop(raw).numpy()
+    input_data, lo, hi = dataloader.normalize(raw)
 
     model.eval()
     output_data = model(input_data).detach()

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 NUM_CHANNELS = 1
 
@@ -35,15 +36,43 @@ class GeneralConv2D(nn.Module):
 class GeneralDeconv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=25, stride=1, padding=None):
         super().__init__()
-        kernel_size = kernel_size + (kernel_size - stride) % 2
+        
+        self.stride = stride
+        
+        self.kernel_size = kernel_size + (kernel_size - stride) % 2
         if padding is None:
-            padding = (kernel_size - stride) // 2
-        self.deconv = nn.ConvTranspose1d(in_features, out_features, kernel_size=kernel_size,
-                                         stride=stride, padding=padding, padding_mode="zeros")  # TODO: Reflect?
+            padding = (self.kernel_size - stride) // 2
+        self.padding = padding
+            
+        self.conv = nn.Conv1d(
+            in_channels=in_features, 
+            out_channels=out_features, 
+            kernel_size=self.kernel_size,
+            stride=1, 
+            padding=0 
+        )
 
     def forward(self, x):
-        deconv = self.deconv(x)
-        return deconv
+        L_in = x.size(-1)
+        L_target = (L_in - 1) * self.stride - 2 * self.padding + self.kernel_size
+        
+        if self.stride > 1:
+            x = F.interpolate(
+                x,
+                scale_factor=self.stride,
+                mode="linear",
+                align_corners=False
+            )
+            
+        L_interp = x.size(-1)
+        total_padding = L_target + self.kernel_size - 1 - L_interp
+        
+        pad_left = total_padding // 2
+        pad_right = total_padding - pad_left
+        
+        x = F.pad(x, (pad_left, pad_right), mode="reflect")
+        
+        return self.conv(x)
 
 
 class GeneralDeconv2D(nn.Module):
@@ -124,14 +153,14 @@ class GeneratorLoss(nn.Module):
         self.opposing_generator = opposing_generator
         self.cycle_consistency_factor = cycle_consistency_factor
 
-        # self.bce = nn.BCEWithLogitsLoss()
-        self.mse = nn.MSELoss()
+        self.bce = nn.BCEWithLogitsLoss()
+        # self.mse = nn.MSELoss()
         self.l1Loss = nn.L1Loss()
 
     def forward(self, x, original):
         disc_logits = self.discriminator(x)
-        # gan_loss = self.bce(disc_logits, torch.ones_like(disc_logits))
-        gan_loss = self.mse(disc_logits, torch.ones_like(disc_logits))
+        gan_loss = self.bce(disc_logits, torch.ones_like(disc_logits))
+        # gan_loss = self.mse(disc_logits, torch.ones_like(disc_logits))
         cycle_consistency_loss = self.l1Loss(
             self.opposing_generator(x), original)
         return gan_loss + self.cycle_consistency_factor * cycle_consistency_loss
@@ -171,9 +200,7 @@ class DiscriminatorLoss(nn.Module):
 
     def __init__(self):
         super().__init__()
-        # self.bce = nn.BCEWithLogitsLoss()
-        self.mse = nn.MSELoss()
-
+        self.bce = nn.BCEWithLogitsLoss()
+        
     def forward(self, x, original):
-        # return self.bce(x, original)
-        return self.mse(x, original)
+        return self.bce(x, original)
