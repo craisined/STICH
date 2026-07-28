@@ -5,7 +5,7 @@ import numpy as np
 import librosa.display
 import matplotlib as plt
 
-def create_spectrogram(y, sr=16000, n_fft=2048, hop_length=128, n_mels=128, device=None):
+def create_spectrogram(y, sr=16000, n_fft=2048, hop_length=256, n_mels=256, device=None):
     # Automatically select GPU if available and no device is specified
     if device is None:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -20,7 +20,8 @@ def create_spectrogram(y, sr=16000, n_fft=2048, hop_length=128, n_mels=128, devi
         sample_rate=sr,
         n_fft=n_fft,
         hop_length=hop_length,
-        n_mels=n_mels
+        n_mels=n_mels,
+        power=2.0
     ).to(device)
     
     db_transform = T.AmplitudeToDB(stype='power').to(device)
@@ -32,7 +33,7 @@ def create_spectrogram(y, sr=16000, n_fft=2048, hop_length=128, n_mels=128, devi
     # Detach from graph (if needed), move to CPU, and convert to numpy array
     return mel_spec_db.detach().cpu().numpy()
 
-def invert_spectrogram(mel_spec_db, sr=16000, n_fft=2048, hop_length=128, n_mels=128, n_iter=128, device=None):
+def invert_spectrogram(mel_spec_db, sr=16000, n_fft=2048, hop_length=256, n_mels=256, n_iter=128, device=None):
     if device is None:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
