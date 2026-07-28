@@ -1,6 +1,7 @@
 import torch
 import torchaudio
 import soundfile as sf
+import random
 
 from pathlib import Path
 import numpy as np
@@ -48,3 +49,15 @@ def numpy_to_wav(embedding, to_humming=True):
     output_numpy = model.decode(output_embedding)
     sf.write(f"output/output.wav", output_numpy, model_sr)
 
+
+num_tests = 10
+num_files = 12000
+
+input_folder = "data/humtrans_processed"
+input_is_humming = True
+
+for i in range(num_tests):
+    input_file = Path(input_folder) / f"sample_{random.randint(0, num_files)}.npy"
+    input_numpy = np.load(input_file)
+
+    output_numpy = wav_to_wav(input_numpy)
