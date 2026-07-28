@@ -1,6 +1,7 @@
 import argparse
 from models import Generator
 from pathlib import Path
+from data import spectrogram
 
 import torch
 import torch.multiprocessing
@@ -43,8 +44,8 @@ for i in range(args.num_samples):
     output_data = model(humming_data).detach().numpy()
 
 
-    original_np = np.load(input_file).astype(np.float32).reshape(-1, 1)
-    output_np = output_data.reshape(-1, 1)
+    original_np = spectrogram.invert_spectrogram(np.load(input_file)).reshape(-1, 1)
+    output_np = spectrogram.invert_spectrogram(output_data).reshape(-1, 1)
 
     sf.write(f"output/original_{i}.wav", original_np, sr)
     sf.write(f"output/reconstructed_{i}.wav", output_np, sr)
