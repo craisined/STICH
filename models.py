@@ -8,6 +8,9 @@ NUM_CHANNELS = 1
 # the decoder to land back on exactly the input length.
 TOTAL_STRIDE = 32
 
+# Lower bound on the spectral-convergence denominator. See STFTLoss.forward.
+SILENT_TARGET_FLOOR = 1.0
+
 
 class GeneralConv1D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=25, stride=1, padding=None,
@@ -190,9 +193,13 @@ class STFTLoss(nn.Module):
         x_magnitude = self.magnitude(x)
         target_magnitude = self.magnitude(target)
 
+        # Spectral convergence divides by the target's magnitude, so a silent
+        # target sends it to ~1e7 and one bad batch wrecks Adam's moments. Real
+        # RMS-normalized crops measure ~500 here, so a floor of 1.0 is under
+        # 0.3% of a normal target and only ever engages on near-silence.
         convergence = (
             torch.linalg.matrix_norm(target_magnitude - x_magnitude)
-            / torch.linalg.matrix_norm(target_magnitude).clamp(min=1e-7)
+            / torch.linalg.matrix_norm(target_magnitude).clamp(min=SILENT_TARGET_FLOOR)
         ).mean()
         log_magnitude = F.l1_loss(x_magnitude.log(), target_magnitude.log())
         return convergence + log_magnitude

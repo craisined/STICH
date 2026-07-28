@@ -13,6 +13,8 @@ SAMPLE_RATE = 16_000
 CROP_SECONDS = 2
 TARGET_RMS = 0.1
 PEAK_CEILING = 0.99
+SILENCE_RMS = 1e-4  # roughly -80 dBFS; inaudible
+CROP_ATTEMPTS = 10  # random windows tried before settling for the loudest
 
 
 class HummingClassicalDataset(Dataset):
@@ -76,7 +78,25 @@ class HummingClassicalDataset(Dataset):
     def _random_crop(self, clip, length):
         # Crop only from the region with real content, never from the padding.
         latest_start = int(length) - self.crop_length
-        start = random.randint(0, latest_start) if latest_start > 0 else 0
+        if latest_start <= 0:
+            return clip[:, : self.crop_length]
+
+        # A crop can still land inside an interior pause -- a rest between
+        # movements, a breath between hums. A silent crop carries no signal and
+        # makes the spectral loss divide by ~0, so resample on silence.
+        for _ in range(CROP_ATTEMPTS):
+            start = random.randint(0, latest_start)
+            window = clip[:, start:start + self.crop_length]
+            if window.pow(2).mean().sqrt() > SILENCE_RMS:
+                return window
+
+        # Every attempt landed in silence, so stop guessing and take the
+        # highest-energy window outright. A prefix sum of squares makes the
+        # energy of every candidate window a single subtraction.
+        cumulative = clip.squeeze(0).pow(2).cumsum(0)
+        cumulative = torch.cat([torch.zeros(1, dtype=cumulative.dtype), cumulative])
+        energy = cumulative[self.crop_length:] - cumulative[: -self.crop_length]
+        start = int(energy[: latest_start + 1].argmax())
         return clip[:, start:start + self.crop_length]
 
 
