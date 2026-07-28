@@ -39,17 +39,18 @@ model.load_state_dict(weights[name_to_class[args.output_class]])
 for i in range(args.num_samples):
     input_file = Path(args.input_folder) / f"sample_{random.randint(0,  num_samples)}.npy"
     raw = torch.from_numpy(np.load(input_file).astype(np.float32)).reshape(1, -1)
+
     raw = dataloader.crop(raw)
-    lo = raw.amin(dim=-1, keepdim=True)
-    hi = raw.amax(dim=-1, keepdim=True)
-    input_data = dataloader.normalize(raw)
+    lo = raw.amin(dim=-1, keepdim=True).numpy()
+    hi = raw.amax(dim=-1, keepdim=True).numpy()
+    input_data = dataloader.normalize(raw).reshape(1, 128, -1)[:, :, :1248].contiguous()
 
     model.eval()
     output_data = model(input_data).detach()
 
 
     original_np = spectrogram.invert_spectrogram(np.load(input_file)).reshape(-1, 1)
-    output_np = dataloader.denormalize(spectrogram.invert_spectrogram(output_data)).reshape(-1, 1)
+    output_np = dataloader.denormalize(spectrogram.invert_spectrogram(output_data), lo, hi).reshape(-1, 1)
 
     sf.write(f"output/original_{i}.wav", original_np, sr)
     sf.write(f"output/reconstructed_{i}.wav", output_np, sr)

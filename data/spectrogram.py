@@ -3,6 +3,7 @@ import torchaudio.transforms as T
 import torchaudio.functional as F
 import numpy as np
 import librosa.display
+import matplotlib as plt
 
 def create_spectrogram(y, sr=16000, n_fft=2048, hop_length=128, n_mels=128, device=None):
     # Automatically select GPU if available and no device is specified
