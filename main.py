@@ -27,9 +27,13 @@ def parse_args():
     parser.add_argument("--crop-seconds", type=int, default=2)
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--iters-per-log", type=int, default=10)
-    parser.add_argument("--humming-folder", type=str, default="data/humtrans_processed")
+    # The *_1d folders hold raw waveforms. The plain *_processed folders hold
+    # 2-D spectrograms on some branches, which this model does not take.
     parser.add_argument(
-        "--classical-folder", type=str, default="data/musicnet_processed"
+        "--humming-folder", type=str, default="data/humtrans_processed_1d"
+    )
+    parser.add_argument(
+        "--classical-folder", type=str, default="data/musicnet_processed_1d"
     )
     return parser.parse_args()
 
@@ -92,16 +96,17 @@ def main():
     lr = args.lr
     betas = (0.5, 0.999)
 
+    # .to() matters here: GeneratorLoss holds the STFT window buffers.
     classical_to_humming_loss = GeneratorLoss(
         humming_disc,
         humming_to_classical_gen,
         cycle_consistency_factor=args.cycle_factor,
-    )
+    ).to(local_rank)
     humming_to_classical_loss = GeneratorLoss(
         classical_disc,
         classical_to_humming_gen,
         cycle_consistency_factor=args.cycle_factor,
-    )
+    ).to(local_rank)
     classical_disc_loss, humming_disc_loss = DiscriminatorLoss(), DiscriminatorLoss()
     classical_to_humming_optim = optim.Adam(
         classical_to_humming_gen.parameters(), lr=lr, betas=betas

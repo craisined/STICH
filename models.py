@@ -177,7 +177,9 @@ class STFTLoss(nn.Module):
             n_fft=self.fft_size,
             hop_length=self.hop_size,
             win_length=self.win_length,
-            window=self.window,
+            # .to() is a no-op once they match; it keeps the loss usable even
+            # if the caller forgets to move this module onto the GPU.
+            window=self.window.to(x.device),
             center=True,
             pad_mode="reflect",
             return_complex=True,

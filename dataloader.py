@@ -38,6 +38,13 @@ class HummingClassicalDataset(Dataset):
         clips, lengths = [], []
         for path in paths:
             array = np.load(path).astype(np.float32)
+            if array.ndim != 1:
+                raise ValueError(
+                    f"{path} has shape {array.shape}, expected a 1-D waveform. "
+                    f"Some branches write 2-D spectrograms into the *_processed "
+                    f"folders; point --humming-folder/--classical-folder at the "
+                    f"*_1d folders instead."
+                )
             length = content_length(array)
             # Anything too short to fill one crop would have to be zero-padded,
             # and padding is the tell we are trying to remove.
