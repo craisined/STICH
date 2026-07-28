@@ -63,7 +63,11 @@ def main():
 
     sampler = DistributedSampler(music_dataset, shuffle=True)
     dataloader = DataLoader(
-        music_dataset, batch_size=args.batch_size, pin_memory=True, sampler=sampler, num_workers=1
+        music_dataset,
+        batch_size=args.batch_size,
+        pin_memory=True,
+        sampler=sampler,
+        num_workers=1,
     )
 
     # Models
@@ -245,27 +249,36 @@ def main():
                 },
                 f"models/cyclegan_{process_id}_{epoch}.pt",
             )
-            
+
             try:
-                
-                
+
                 cpu_generator = Generator()
-                cpu_generator.load_state_dict(humming_to_classical_gen.module.state_dict())
+                cpu_generator.load_state_dict(
+                    humming_to_classical_gen.module.state_dict()
+                )
                 cpu_generator.eval()
                 torch.onnx.export(
-                    cpu_generator, torch.randn(1, 1, 160_000), "models/humming_to_classical.onnx",
-                    input_names=["audio"], output_names=["audio_out"],
+                    cpu_generator,
+                    torch.randn(1, 1, 160_000),
+                    "models/humming_to_classical.onnx",
+                    input_names=["audio"],
+                    output_names=["audio_out"],
                     dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
                     opset_version=17,
                     external_data=False,
                 )
-                
+
                 cpu_generator = Generator()
-                cpu_generator.load_state_dict(classical_to_humming_gen.module.state_dict())
+                cpu_generator.load_state_dict(
+                    classical_to_humming_gen.module.state_dict()
+                )
                 cpu_generator.eval()
                 torch.onnx.export(
-                    cpu_generator, torch.randn(1, 1, 160_000), "models/classical_to_humming.onnx",
-                    input_names=["audio"], output_names=["audio_out"],
+                    cpu_generator,
+                    torch.randn(1, 1, 160_000),
+                    "models/classical_to_humming.onnx",
+                    input_names=["audio"],
+                    output_names=["audio_out"],
                     dynamic_axes={"audio": {2: "samples"}, "audio_out": {2: "samples"}},
                     opset_version=17,
                     external_data=False,
