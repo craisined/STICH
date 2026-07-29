@@ -1,4 +1,4 @@
 flask
 librosa
 numpy
-onnxruntime
+torch

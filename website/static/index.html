@@ -85,44 +85,49 @@
     <section class="section section--alt" id="how">
       <div class="section__head">
         <h2>How it works</h2>
-        <p class="section__lead">Two artists and two critics, learning by competing.</p>
+        <p class="section__lead">One map of sound, and a step across it.</p>
       </div>
 
       <div class="how-grid">
         <div class="how-card">
-          <div class="how-card__icon">🎨</div>
-          <h3>The artists</h3>
-          <p>Two AI "composers." One turns humming into classical; the other
-            turns classical into humming.</p>
+          <div class="how-card__icon">🗺</div>
+          <h3>The map</h3>
+          <p>An <em>autoencoder</em> learns to boil any clip down to a short list
+            of numbers — a point on a map of sound — and to rebuild the audio
+            from that point again.</p>
         </div>
         <div class="how-card">
-          <div class="how-card__icon">🧐</div>
-          <h3>The critics</h3>
-          <p>Two AI "judges" try to spot fakes. If a judge can't tell the
-            result from the real thing, the artist is doing well.</p>
+          <div class="how-card__icon">📍</div>
+          <h3>The two landmarks</h3>
+          <p>Thousands of hums land in one region of that map, thousands of
+            classical clips in another. Average each pile and you get a landmark
+            for "sounds hummed" and one for "sounds classical."</p>
         </div>
         <div class="how-card">
-          <div class="how-card__icon">🔁</div>
-          <h3>The safety check</h3>
-          <p><em>Cycle-consistency:</em> translate a tune and translate it back —
-            you should get close to the original. That keeps the melody intact.</p>
+          <div class="how-card__icon">➕</div>
+          <h3>The step</h3>
+          <p>Find your clip on the map, step away from the humming landmark and
+            the same distance toward the classical one, then rebuild the audio
+            from where you land.</p>
         </div>
       </div>
 
-      <figure class="cycle-diagram">
-        <div class="cycle-diagram__row">
-          <span class="node node--hum">🎤 Humming</span>
-          <span class="edge"><span class="edge__label">artist →</span></span>
+      <figure class="flow-diagram">
+        <div class="flow-diagram__row">
+          <span class="node node--hum">🎤 Your hum</span>
+          <span class="edge"><span class="edge__label">encode →</span></span>
+          <span class="node node--emb">📍 A point on the map</span>
+          <span class="edge"><span class="edge__label">− hum + classical →</span></span>
           <span class="node node--cls">🎻 Classical</span>
-          <span class="edge"><span class="edge__label">artist →</span></span>
-          <span class="node node--hum">🎤 Humming again</span>
         </div>
-        <figcaption>Translate and translate back — the tune should survive the round trip.</figcaption>
+        <figcaption>Encode to a point, swap the humming landmark for the classical
+          one, decode back to audio. The melody rides along; only the style moves.</figcaption>
       </figure>
       <p class="tech-note">
-        In machine-learning terms this is a <strong>CycleGAN</strong>: two
-        generators, two discriminators, trained with adversarial and
-        cycle-consistency losses.
+        In machine-learning terms: an <strong>autoencoder</strong> over raw audio
+        plus <strong>vector arithmetic</strong> on its latent embeddings —
+        subtract the mean embedding of one domain, add the mean of the other,
+        decode. No adversarial training, and still no paired examples.
       </p>
     </section>
 
@@ -179,7 +184,8 @@
             <div class="player player--out" data-src="/examples/cycle_classical.wav" data-label="2 · As classical"></div>
             <div class="player" data-src="/examples/cycle_hum_out.wav" data-label="3 · Back to hum"></div>
           </div>
-          <p class="pair-card__note">Steps 1 and 3 should sound close — that's cycle-consistency at work.</p>
+          <p class="pair-card__note">Steps 1 and 3 should sound close — the step across
+            the map is reversible, so the melody should survive the trip.</p>
         </div>
       </div>
 
@@ -253,7 +259,7 @@
       <div class="facts">
         <div class="fact">
           <div class="fact__k">Model</div>
-          <div class="fact__v">CycleGAN — 2 generators + 2 discriminators, 1-D convolutions with ResNet blocks over raw audio.</div>
+          <div class="fact__v">Autoencoder over raw audio; style transfer is vector arithmetic on its latent embeddings.</div>
         </div>
         <div class="fact">
           <div class="fact__k">Humming data</div>
@@ -265,7 +271,7 @@
         </div>
         <div class="fact">
           <div class="fact__k">Audio format</div>
-          <div class="fact__v">Mono, 16&nbsp;kHz, processed into 10-second clips.</div>
+          <div class="fact__v">Mono 10-second clips — 16&nbsp;kHz on disk, resampled to 48&nbsp;kHz for the model, which returns 48&nbsp;kHz.</div>
         </div>
         <div class="fact">
           <div class="fact__k">Training</div>
@@ -281,10 +287,8 @@
         <figcaption>Training loss (illustrative — real plots will replace this)</figcaption>
         <canvas id="lossChart" width="720" height="300"></canvas>
         <div class="chart-legend">
-          <span><i class="sw sw--1"></i>Classical critic</span>
-          <span><i class="sw sw--2"></i>Humming critic</span>
-          <span><i class="sw sw--3"></i>Hum→Classical artist</span>
-          <span><i class="sw sw--4"></i>Classical→Hum artist</span>
+          <span><i class="sw sw--1"></i>Reconstruction loss</span>
+          <span><i class="sw sw--2"></i>Validation loss</span>
         </div>
       </figure>
     </section>

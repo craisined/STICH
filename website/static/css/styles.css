@@ -196,14 +196,14 @@ code {
 .how-card h3 { margin: 0 0 0.4rem; font-size: 1.2rem; }
 .how-card p { margin: 0; color: var(--muted); }
 
-.cycle-diagram {
+.flow-diagram {
   margin-block: 0 1.2rem;
   padding: 1.6rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
-.cycle-diagram__row {
+.flow-diagram__row {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -218,6 +218,7 @@ code {
 }
 .node--hum { background: rgba(139, 123, 240, 0.16); color: var(--hum-soft); }
 .node--cls { background: rgba(230, 178, 78, 0.14); color: var(--cls-soft); }
+.node--emb { background: rgba(255, 255, 255, 0.06); color: var(--muted); }
 .edge { position: relative; min-width: 70px; height: 2px; background: var(--border); }
 .edge__label {
   position: absolute;
@@ -228,7 +229,7 @@ code {
   color: var(--muted);
   white-space: nowrap;
 }
-.cycle-diagram figcaption { margin-top: 1rem; text-align: center; color: var(--muted); font-size: 0.92rem; }
+.flow-diagram figcaption { margin-top: 1rem; text-align: center; color: var(--muted); font-size: 0.92rem; }
 .tech-note { color: var(--muted); font-size: 0.95rem; }
 .tech-note strong { color: var(--text); }
 
