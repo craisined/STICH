@@ -1,12 +1,13 @@
 import torch.nn as nn
 
+
 class ResNet(nn.Module):
     def __init__(self):
         super().__init__()
         self.network = nn.Sequential(
             nn.Conv2d(padding="same", kernel=3, in_channels=64, out_channels=64),
             nn.ReLU(),
-            nn.Conv2d(padding="same", kernel=3, in_channels=64, out_channels=64)
+            nn.Conv2d(padding="same", kernel=3, in_channels=64, out_channels=64),
         )
 
     def forward(self, inp):
@@ -32,6 +33,7 @@ class Generator(nn.Module):
     def forward(self, inp):
         return self.network(inp)
 
+
 class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
@@ -48,23 +50,27 @@ class Discriminator(nn.Module):
     def forward(self, x):
         return self.network(x)
 
+
 class GeneratorLoss:
-    def __init__(self, cycle_consistency_factor = 10):
+    def __init__(self, cycle_consistency_factor=10):
         super().__init__()
         self.bce = nn.BCEWithLogitsLoss()
         self.l1 = nn.L1Loss()
-    
+
     def forward(self, generated_embedding, original, inverse_generator, discriminator):
         disc_result = discriminator(generated_embedding)
         gan_loss = self.bce(disc_result, torch.ones_like(disc_result))
-        cycle_consistency = self.l1(self.inverse_generator(generated_embedding), original)
+        cycle_consistency = self.l1(
+            self.inverse_generator(generated_embedding), original
+        )
         return gan_loss + self.cycle_consistency_factor * cycle_consistency
+
 
 class DiscriminatorLoss(nn.Module):
 
     def __init__(self):
         super().__init__()
         self.bce = nn.BCEWithLogitsLoss()
-        
+
     def forward(self, x, original):
         return self.bce(x, original)
