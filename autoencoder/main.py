@@ -47,3 +47,12 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         return self.network(x)
+
+class DiscriminatorLoss(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.bce = nn.BCEWithLogitsLoss()
+        
+    def forward(self, x, original):
+        return self.bce(x, original)
