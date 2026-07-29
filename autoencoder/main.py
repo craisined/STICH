@@ -8,8 +8,8 @@ from torch.utils.data import DataLoader, Dataset
 # 1. Unpaired Dataset Class (Combines both domain sources)
 class UnpairedMusicDataset(Dataset):
     def __init__(self, path_humming, path_classical):
-        self.humming_data = torch.tensor(np.load(path_humming), dtype=torch.float32)
-        self.classical_data = torch.tensor(np.load(path_classical), dtype=torch.float32)
+        self.humming_data = torch.from_numpy(np.load(path_humming)).float()
+        self.classical_data = torch.from_numpy(np.load(path_classical)).float()
 
         self.len_humming = len(self.humming_data)
         self.len_classical = len(self.classical_data)
@@ -31,12 +31,14 @@ class UnpairedMusicDataset(Dataset):
 
 # 2. Generator Architecture
 class ResNet(nn.Module):
-    def __init__(self):
+    def __init__(self, channels=64):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Conv1d(padding="same", kernel_size=3, in_channels=16, out_channels=16),
+            nn.Conv1d(channels, channels, kernel_size=3, padding="same"),
+            nn.InstanceNorm1d(channels),
             nn.ReLU(),
-            nn.Conv1d(padding="same", kernel_size=3, in_channels=16, out_channels=16),
+            nn.Conv1d(channels, channels, kernel_size=3, padding="same"),
+            nn.InstanceNorm1d(channels),
         )
 
     def forward(self, inp):
@@ -47,11 +49,13 @@ class Generator(nn.Module):
     def __init__(self):
         super().__init__()
         self.network = nn.Sequential(
+            nn.Conv1d(16, 64, kernel_size=3, padding="same"),
             ResNet(),
             nn.ReLU(),
             ResNet(),
             nn.ReLU(),
             ResNet(),
+            nn.Conv1d(64, 16, kernel_size=3, padding="same"),
         )
 
     def forward(self, inp):
@@ -66,10 +70,8 @@ class Discriminator(nn.Module):
         self.network = nn.Sequential(
             nn.Linear(16, 256),
             nn.ReLU(),
-            nn.Dropout(0.3),
             nn.Linear(256, 64),
             nn.ReLU(),
-            nn.Dropout(0.3),
             nn.Linear(64, 1),
         )
 
@@ -146,66 +148,75 @@ train_loader = DataLoader(
     num_workers=2
 )
 
-epochs = 10
+def main():
+    epochs = 10
 
-for epoch in range(epochs):
-    gen_humming_to_classical.train()
-    gen_classical_to_humming.train()
-    disc_classical.train()
-    disc_humming.train()
+    for epoch in range(epochs):
+        gen_humming_to_classical.train()
+        gen_classical_to_humming.train()
+        disc_classical.train()
+        disc_humming.train()
 
-    for i, (humming, classical) in enumerate(train_loader):
-        humming = humming.to(device)
-        classical = classical.to(device)
+        for i, (humming, classical) in enumerate(train_loader):
+            humming = humming.to(device)
+            classical = classical.to(device)
 
-        # -----------------------------------------------------------
-        # 1. Train Discriminators
-        # -----------------------------------------------------------
-        optimizer_D.zero_grad()
+            # -----------------------------------------------------------
+            # 1. Train Discriminators
+            # -----------------------------------------------------------
+            optimizer_D.zero_grad()
 
-        fake_classical = gen_humming_to_classical(humming)
-        fake_humming = gen_classical_to_humming(classical)
+            fake_classical = gen_humming_to_classical(humming)
+            fake_humming = gen_classical_to_humming(classical)
 
-        # Classical Discriminator Loss
-        real_disc_classical = disc_classical(classical)
-        fake_disc_classical = disc_classical(fake_classical.detach())
-        loss_D_classical_real = criterion_D(real_disc_classical, torch.ones_like(real_disc_classical))
-        loss_D_classical_fake = criterion_D(fake_disc_classical, torch.zeros_like(fake_disc_classical))
-        loss_D_classical = (loss_D_classical_real + loss_D_classical_fake) / 2
+            # Classical Discriminator Loss
+            real_disc_classical = disc_classical(classical)
+            fake_disc_classical = disc_classical(fake_classical.detach())
+            loss_D_classical_real = criterion_D(real_disc_classical, torch.ones_like(real_disc_classical))
+            loss_D_classical_fake = criterion_D(fake_disc_classical, torch.zeros_like(fake_disc_classical))
+            loss_D_classical = (loss_D_classical_real + loss_D_classical_fake) / 2
 
-        # Humming Discriminator Loss
-        real_disc_humming = disc_humming(humming)
-        fake_disc_humming = disc_humming(fake_humming.detach())
-        loss_D_humming_real = criterion_D(real_disc_humming, torch.ones_like(real_disc_humming))
-        loss_D_humming_fake = criterion_D(fake_disc_humming, torch.zeros_like(fake_disc_humming))
-        loss_D_humming = (loss_D_humming_real + loss_D_humming_fake) / 2
+            # Humming Discriminator Loss
+            real_disc_humming = disc_humming(humming)
+            fake_disc_humming = disc_humming(fake_humming.detach())
+            loss_D_humming_real = criterion_D(real_disc_humming, torch.ones_like(real_disc_humming))
+            loss_D_humming_fake = criterion_D(fake_disc_humming, torch.zeros_like(fake_disc_humming))
+            loss_D_humming = (loss_D_humming_real + loss_D_humming_fake) / 2
 
-        # Total Discriminator Loss
-        total_loss_D = loss_D_classical + loss_D_humming
-        total_loss_D.backward()
-        optimizer_D.step()
+            # Total Discriminator Loss
+            total_loss_D = loss_D_classical + loss_D_humming
+            total_loss_D.backward()
+            optimizer_D.step()
 
-        # -----------------------------------------------------------
-        # 2. Train Generators
-        # -----------------------------------------------------------
-        optimizer_G.zero_grad()
+            # -----------------------------------------------------------
+            # 2. Train Generators
+            # -----------------------------------------------------------
+            optimizer_G.zero_grad()
 
-        loss_G_humming_to_classical = criterion_G(
-            generated_embedding=fake_classical,
-            original=humming,
-            inverse_generator=gen_classical_to_humming,
-            discriminator=disc_classical
-        )
+            loss_G_humming_to_classical = criterion_G(
+                generated_embedding=fake_classical,
+                original=humming,
+                inverse_generator=gen_classical_to_humming,
+                discriminator=disc_classical
+            )
 
-        loss_G_classical_to_humming = criterion_G(
-            generated_embedding=fake_humming,
-            original=classical,
-            inverse_generator=gen_humming_to_classical,
-            discriminator=disc_humming
-        )
+            loss_G_classical_to_humming = criterion_G(
+                generated_embedding=fake_humming,
+                original=classical,
+                inverse_generator=gen_humming_to_classical,
+                discriminator=disc_humming
+            )
 
-        total_loss_G = loss_G_humming_to_classical + loss_G_classical_to_humming
-        total_loss_G.backward()
-        optimizer_G.step()
+            total_loss_G = loss_G_humming_to_classical + loss_G_classical_to_humming
+            total_loss_G.backward()
+            optimizer_G.step()
 
-    print(f"Epoch [{epoch + 1}/{epochs}] | Loss D: {total_loss_D.item():.4f} | Loss G: {total_loss_G.item():.4f}")
+        print(f"Epoch [{epoch + 1}/{epochs}] | Loss D: {total_loss_D.item():.4f} | Loss G: {total_loss_G.item():.4f}")
+
+    torch.save(gen_humming_to_classical.state_dict(), "gen_humming_to_classical.pth")
+    torch.save(gen_classical_to_humming.state_dict(), "gen_classical_to_humming.pth")
+
+    print("Generators saved successfully!")
+
+if __name__=="__main__":
+    main()
