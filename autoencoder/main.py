@@ -1,15 +1,42 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import DataLoader, Dataset
 
 
+# 1. Unpaired Dataset Class (Combines both domain sources)
+class UnpairedMusicDataset(Dataset):
+    def __init__(self, path_humming, path_classical):
+        self.humming_data = torch.tensor(np.load(path_humming), dtype=torch.float32)
+        self.classical_data = torch.tensor(np.load(path_classical), dtype=torch.float32)
+
+        self.len_humming = len(self.humming_data)
+        self.len_classical = len(self.classical_data)
+
+    def __len__(self):
+        # Epoch size matches the larger dataset
+        return max(self.len_humming, self.len_classical)
+
+    def __getitem__(self, idx):
+        # Cycle through humming data using modulo if index exceeds length
+        humming_sample = self.humming_data[idx % self.len_humming]
+
+        # Draw a random classical sample to ensure unaligned/unpaired matching
+        random_classical_idx = torch.randint(0, self.len_classical, (1,)).item()
+        classical_sample = self.classical_data[random_classical_idx]
+
+        return humming_sample, classical_sample
+
+
+# 2. Generator Architecture
 class ResNet(nn.Module):
     def __init__(self):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Conv2d(padding="same", kernel=3, in_channels=64, out_channels=64),
+            nn.Conv1d(padding="same", kernel_size=3, in_channels=16, out_channels=16),
             nn.ReLU(),
-            nn.Conv2d(padding="same", kernel=3, in_channels=64, out_channels=64),
+            nn.Conv1d(padding="same", kernel_size=3, in_channels=16, out_channels=16),
         )
 
     def forward(self, inp):
@@ -25,22 +52,19 @@ class Generator(nn.Module):
             ResNet(),
             nn.ReLU(),
             ResNet(),
-            nn.ReLU(),
-            ResNet(),
-            nn.ReLU(),
-            ResNet(),
-            nn.ReLU(),
         )
 
     def forward(self, inp):
         return self.network(inp)
 
 
+# 3. Discriminator Architecture
 class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
+        self.pool = nn.AdaptiveAvgPool1d(1)
         self.network = nn.Sequential(
-            nn.Linear(16, 243),
+            nn.Linear(16, 256),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(256, 64),
@@ -50,26 +74,29 @@ class Discriminator(nn.Module):
         )
 
     def forward(self, x):
+        x = self.pool(x).squeeze(-1)  # (Batch, 16)
         return self.network(x)
 
 
-class GeneratorLoss:
+# 4. Loss Functions
+class GeneratorLoss(nn.Module):
     def __init__(self, cycle_consistency_factor=10):
         super().__init__()
+        self.cycle_consistency_factor = cycle_consistency_factor
         self.bce = nn.BCEWithLogitsLoss()
         self.l1 = nn.L1Loss()
 
     def forward(self, generated_embedding, original, inverse_generator, discriminator):
         disc_result = discriminator(generated_embedding)
         gan_loss = self.bce(disc_result, torch.ones_like(disc_result))
-        cycle_consistency = self.l1(
-            self.inverse_generator(generated_embedding), original
-        )
-        return gan_loss + self.cycle_consistency_factor * cycle_consistency
+        
+        reconstructed = inverse_generator(generated_embedding)
+        cycle_consistency = self.l1(reconstructed, original)
+        
+        return gan_loss + (self.cycle_consistency_factor * cycle_consistency)
 
 
 class DiscriminatorLoss(nn.Module):
-
     def __init__(self):
         super().__init__()
         self.bce = nn.BCEWithLogitsLoss()
@@ -78,9 +105,13 @@ class DiscriminatorLoss(nn.Module):
         return self.bce(disc_result, expected)
 
 
+# ---------------------------------------------------------------
+# Setup & Training Loop
+# ---------------------------------------------------------------
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Initialize CycleGAN-style generators and discriminators
+# Initialize Models
 gen_humming_to_classical = Generator().to(device)
 gen_classical_to_humming = Generator().to(device)
 
@@ -103,9 +134,17 @@ optimizer_D = optim.Adam(
     betas=(0.5, 0.999)
 )
 
-# Placeholder DataLoaders (Replace with your PyTorch DataLoaders)
-humming_dataloader = []
-classical_dataloader = []
+# Unified Dataset & DataLoader instantiation
+dataset = UnpairedMusicDataset("humming.npy", "classical.npy")
+
+train_loader = DataLoader(
+    dataset,
+    batch_size=32,
+    shuffle=True,
+    drop_last=True,
+    pin_memory=True if device.type == "cuda" else False,
+    num_workers=2
+)
 
 epochs = 10
 
@@ -115,7 +154,7 @@ for epoch in range(epochs):
     disc_classical.train()
     disc_humming.train()
 
-    for i, (humming, classical) in enumerate(zip(humming_dataloader, classical_dataloader)):
+    for i, (humming, classical) in enumerate(train_loader):
         humming = humming.to(device)
         classical = classical.to(device)
 
@@ -124,7 +163,6 @@ for epoch in range(epochs):
         # -----------------------------------------------------------
         optimizer_D.zero_grad()
 
-        # Generate fake embeddings
         fake_classical = gen_humming_to_classical(humming)
         fake_humming = gen_classical_to_humming(classical)
 
@@ -152,7 +190,6 @@ for epoch in range(epochs):
         # -----------------------------------------------------------
         optimizer_G.zero_grad()
 
-        # Generator loss: Humming -> Classical -> Humming
         loss_G_humming_to_classical = criterion_G(
             generated_embedding=fake_classical,
             original=humming,
@@ -160,7 +197,6 @@ for epoch in range(epochs):
             discriminator=disc_classical
         )
 
-        # Generator loss: Classical -> Humming -> Classical
         loss_G_classical_to_humming = criterion_G(
             generated_embedding=fake_humming,
             original=classical,
@@ -168,7 +204,6 @@ for epoch in range(epochs):
             discriminator=disc_humming
         )
 
-        # Total Generator Loss
         total_loss_G = loss_G_humming_to_classical + loss_G_classical_to_humming
         total_loss_G.backward()
         optimizer_G.step()
