@@ -59,6 +59,7 @@ class GeneratorLoss:
         gan_loss = self.bce(disc_result, torch.ones_like(disc_result))
         cycle_consistency = self.l1(self.inverse_generator(generated_embedding), original)
         return gan_loss + self.cycle_consistency_factor * cycle_consistency
+
 class DiscriminatorLoss(nn.Module):
 
     def __init__(self):
