@@ -35,10 +35,10 @@ class ResNet(nn.Module):
         super().__init__()
         self.network = nn.Sequential(
             nn.Conv1d(channels, channels, kernel_size=25, padding="same"),
-            nn.InstanceNorm1d(channels),
-            nn.ReLU(),
+            nn.BatchNorm1d(channels),
+            nn.LeakyReLU(),
             nn.Conv1d(channels, channels, kernel_size=25, padding="same"),
-            nn.InstanceNorm1d(channels),
+            nn.BatchNorm1d(channels),
         )
 
     def forward(self, inp):
@@ -51,9 +51,9 @@ class Generator(nn.Module):
         self.network = nn.Sequential(
             nn.Conv1d(16, 64, kernel_size=25, padding="same"),
             ResNet(),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             ResNet(),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             ResNet(),
             nn.Conv1d(64, 16, kernel_size=25, padding="same"),
         )
@@ -87,7 +87,7 @@ class Discriminator(nn.Module):
             nn.Conv1d(in_channels, 64, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Conv1d(64, 128, kernel_size=4, stride=2, padding=1),
-            nn.InstanceNorm1d(128),
+            nn.BatchNorm1d(128),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Conv1d(128, 1, kernel_size=4, stride=1, padding=1),
         )
@@ -98,20 +98,26 @@ class Discriminator(nn.Module):
 
 # 4. Loss Functions
 class GeneratorLoss(nn.Module):
-    def __init__(self, cycle_consistency_factor=10):
+    def __init__(self, cycle_consistency_factor=10, identity_factor = 5):
         super().__init__()
         self.cycle_consistency_factor = cycle_consistency_factor
+        self.identity_factor = identity_factor
         self.bce = nn.BCEWithLogitsLoss()
-        self.l1 = nn.L1Loss()
+        self.l1_cycle = nn.L1Loss()
+        self.l1_identity = nn.L1Loss()
 
-    def forward(self, generated_embedding, original, inverse_generator, discriminator):
+
+    def forward(self, generated_embedding, original, generator, inverse_generator, discriminator):
         disc_result = discriminator(generated_embedding)
         gan_loss = self.bce(disc_result, torch.ones_like(disc_result))
         
         reconstructed = inverse_generator(generated_embedding)
-        cycle_consistency = self.l1(reconstructed, original)
+        cycle_consistency = self.l1_cycle(reconstructed, original)
+
+        identity = generator(generated_embedding)
+        identity_consistency = self.l1_identity(identity, original)
         
-        return gan_loss + (self.cycle_consistency_factor * cycle_consistency)
+        return gan_loss + (self.cycle_consistency_factor * cycle_consistency) + (self.identity_factor * identity_consistency)
 
 
 class DiscriminatorLoss(nn.Module):
@@ -137,7 +143,7 @@ disc_classical = Discriminator().to(device)
 disc_humming = Discriminator().to(device)
 
 # Initialize Loss Functions
-criterion_G = GeneratorLoss(cycle_consistency_factor=5).to(device)
+criterion_G = GeneratorLoss().to(device)
 criterion_D = DiscriminatorLoss().to(device)
 
 # Initialize Optimizers
