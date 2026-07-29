@@ -59,10 +59,9 @@ if __name__ == "__main__":
         device=device
     )
 
-    # Example: Translate a classical sample into humming
-    """classical_humming = run_inference(
+    """# Example: Translate a classical sample into humming
+    generated_humming = run_inference(
         input_path="sample_classical.npy",
-        output_path="translated_humming.npy",
         weights_path="gen_classical_to_humming.pth",
         device=device
     )"""
