@@ -36,6 +36,16 @@ def parse_args():
     parser.add_argument("--iters-per-log", type=int, default=10)
     parser.add_argument("--disc-scales", type=int, default=3,
                         help="discriminators per domain, at 1x/2x/4x downsampling")
+    # Levers for holding the discriminator back. Spotting fake audio is far
+    # easier than generating it, so an evenly matched pair is not a fair fight.
+    parser.add_argument("--disc-lr", type=float, default=5e-5,
+                        help="discriminator learning rate; keep below --lr")
+    parser.add_argument("--disc-features", type=int, default=32,
+                        help="discriminator width per scale (generator uses 32)")
+    parser.add_argument("--disc-every", type=int, default=1,
+                        help="update the discriminators every N steps")
+    parser.add_argument("--real-label", type=float, default=0.9,
+                        help="one-sided label smoothing target for real audio")
     parser.add_argument("--pool-size", type=int, default=50,
                         help="past fakes kept for the discriminators; 0 disables")
     # Safety net against a single pathological batch, not a regularizer.
@@ -100,8 +110,10 @@ def main():
     # Models
     classical_to_humming_gen = Generator().to(local_rank)
     humming_to_classical_gen = Generator().to(local_rank)
-    classical_disc = MultiScaleDiscriminator(args.disc_scales).to(local_rank)
-    humming_disc = MultiScaleDiscriminator(args.disc_scales).to(local_rank)
+    classical_disc = MultiScaleDiscriminator(
+        args.disc_scales, args.disc_features).to(local_rank)
+    humming_disc = MultiScaleDiscriminator(
+        args.disc_scales, args.disc_features).to(local_rank)
 
     classical_to_humming_gen = DDP(classical_to_humming_gen, device_ids=[local_rank])
     humming_to_classical_gen = DDP(humming_to_classical_gen, device_ids=[local_rank])
@@ -127,15 +139,18 @@ def main():
         classical_to_humming_gen,
         cycle_consistency_factor=args.cycle_factor,
     )
-    classical_disc_loss, humming_disc_loss = DiscriminatorLoss(), DiscriminatorLoss()
+    classical_disc_loss = DiscriminatorLoss(args.real_label)
+    humming_disc_loss = DiscriminatorLoss(args.real_label)
     classical_to_humming_optim = optim.Adam(
         classical_to_humming_gen.parameters(), lr=lr, betas=betas
     )
     humming_to_classical_optim = optim.Adam(
         humming_to_classical_gen.parameters(), lr=lr, betas=betas
     )
-    classical_disc_optim = optim.Adam(classical_disc.parameters(), lr=lr, betas=betas)
-    humming_disc_optim = optim.Adam(humming_disc.parameters(), lr=lr, betas=betas)
+    classical_disc_optim = optim.Adam(
+        classical_disc.parameters(), lr=args.disc_lr, betas=betas)
+    humming_disc_optim = optim.Adam(
+        humming_disc.parameters(), lr=args.disc_lr, betas=betas)
 
     classical_pool = ReplayPool(args.pool_size)
     humming_pool = ReplayPool(args.pool_size)
@@ -180,59 +195,65 @@ def main():
         epoch_humming_to_classical_gen_loss_history = []
         epoch_classical_to_humming_gen_loss_history = []
 
+        # Carried over on iterations where --disc-every skips the discriminators,
+        # so the periodic log line always has something to report.
+        classical_fake_disc_loss = classical_real_disc_loss = float("nan")
+        humming_fake_disc_loss = humming_real_disc_loss = float("nan")
+
         for iteration, (humming_data, classical_data) in enumerate(dataloader):
 
             humming_data = humming_data.to(local_rank)
             classical_data = classical_data.to(local_rank)
 
             # ---- Discriminators ----
-            classical_disc_optim.zero_grad()
-            humming_disc_optim.zero_grad()
+            if iteration % args.disc_every == 0:
+                classical_disc_optim.zero_grad()
+                humming_disc_optim.zero_grad()
 
-            with autocast("cuda"):
-                classical_output = humming_to_classical_gen(humming_data).detach()
-                humming_output = classical_to_humming_gen(classical_data).detach()
+                with autocast("cuda"):
+                    classical_output = humming_to_classical_gen(humming_data).detach()
+                    humming_output = classical_to_humming_gen(classical_data).detach()
 
-                # Judge a mix of current and past fakes, not just the newest.
-                classical_fakes = classical_pool.query(classical_output)
-                humming_fakes = humming_pool.query(humming_output)
+                    # Judge a mix of current and past fakes, not just the newest.
+                    classical_fakes = classical_pool.query(classical_output)
+                    humming_fakes = humming_pool.query(humming_output)
 
-                classical_fake_loss = classical_disc_loss(
-                    classical_disc(classical_fakes), is_real=False
+                    classical_fake_loss = classical_disc_loss(
+                        classical_disc(classical_fakes), is_real=False
+                    )
+                    classical_real_loss = classical_disc_loss(
+                        classical_disc(classical_data), is_real=True
+                    )
+                    humming_fake_loss = humming_disc_loss(
+                        humming_disc(humming_fakes), is_real=False
+                    )
+                    humming_real_loss = humming_disc_loss(
+                        humming_disc(humming_data), is_real=True
+                    )
+                    disc_loss = (
+                        classical_fake_loss + classical_real_loss
+                        + humming_fake_loss + humming_real_loss
+                    )
+
+                    classical_fake_disc_loss = classical_fake_loss.item()
+                    classical_real_disc_loss = classical_real_loss.item()
+                    humming_fake_disc_loss = humming_fake_loss.item()
+                    humming_real_disc_loss = humming_real_loss.item()
+
+                epoch_classical_disc_loss_history.append(
+                    (classical_real_disc_loss + classical_fake_disc_loss) / 2
                 )
-                classical_real_loss = classical_disc_loss(
-                    classical_disc(classical_data), is_real=True
-                )
-                humming_fake_loss = humming_disc_loss(
-                    humming_disc(humming_fakes), is_real=False
-                )
-                humming_real_loss = humming_disc_loss(
-                    humming_disc(humming_data), is_real=True
-                )
-                disc_loss = (
-                    classical_fake_loss + classical_real_loss
-                    + humming_fake_loss + humming_real_loss
+                epoch_humming_disc_loss_history.append(
+                    (humming_real_disc_loss + humming_fake_disc_loss) / 2
                 )
 
-                classical_fake_disc_loss = classical_fake_loss.item()
-                classical_real_disc_loss = classical_real_loss.item()
-                humming_fake_disc_loss = humming_fake_loss.item()
-                humming_real_disc_loss = humming_real_loss.item()
-
-            epoch_classical_disc_loss_history.append(
-                (classical_real_disc_loss + classical_fake_disc_loss) / 2
-            )
-            epoch_humming_disc_loss_history.append(
-                (humming_real_disc_loss + humming_fake_disc_loss) / 2
-            )
-
-            scaler.scale(disc_loss).backward()
-            scaler.unscale_(classical_disc_optim)
-            scaler.unscale_(humming_disc_optim)
-            clip_grad_norm_(classical_disc.parameters(), args.grad_clip)
-            clip_grad_norm_(humming_disc.parameters(), args.grad_clip)
-            scaler.step(classical_disc_optim)
-            scaler.step(humming_disc_optim)
+                scaler.scale(disc_loss).backward()
+                scaler.unscale_(classical_disc_optim)
+                scaler.unscale_(humming_disc_optim)
+                clip_grad_norm_(classical_disc.parameters(), args.grad_clip)
+                clip_grad_norm_(humming_disc.parameters(), args.grad_clip)
+                scaler.step(classical_disc_optim)
+                scaler.step(humming_disc_optim)
 
             # ---- Generators ----
             # The generator step only needs the discriminators' verdict, so

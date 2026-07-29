@@ -271,32 +271,37 @@ class GeneratorLoss(nn.Module):
 
 class Discriminator(nn.Module):
 
-    initial_features = 64
+    # Deliberately narrower than the generator. Telling real audio from fake is
+    # a much easier job than synthesising it, so matching their widths hands the
+    # discriminator the argument -- at 64 it was 4.5M parameters per scale
+    # against the generator's 4.7M total, and it won every time.
+    initial_features = 32
     relu_factor = .2
 
-    def __init__(self):
+    def __init__(self, initial_features=None):
         super().__init__()
+        features = initial_features or self.initial_features
         self.nn = nn.Sequential(
-            GeneralConv1D(NUM_CHANNELS, self.initial_features,
+            GeneralConv1D(NUM_CHANNELS, features,
                           kernel_size=25, stride=4),
             nn.LeakyReLU(self.relu_factor),
 
-            GeneralConv1D(self.initial_features,
-                          self.initial_features * 2, kernel_size=25, stride=4),
-            nn.InstanceNorm1d(self.initial_features * 2, affine=True),
+            GeneralConv1D(features,
+                          features * 2, kernel_size=25, stride=4),
+            nn.InstanceNorm1d(features * 2, affine=True),
             nn.LeakyReLU(self.relu_factor),
 
-            GeneralConv1D(self.initial_features * 2,
-                          self.initial_features * 4, kernel_size=25, stride=4),
-            nn.InstanceNorm1d(self.initial_features * 4, affine=True),
+            GeneralConv1D(features * 2,
+                          features * 4, kernel_size=25, stride=4),
+            nn.InstanceNorm1d(features * 4, affine=True),
             nn.LeakyReLU(self.relu_factor),
 
-            GeneralConv1D(self.initial_features * 4, self.initial_features *
+            GeneralConv1D(features * 4, features *
                           8, kernel_size=25, stride=4, padding=0),
-            nn.InstanceNorm1d(self.initial_features * 8, affine=True),
+            nn.InstanceNorm1d(features * 8, affine=True),
             nn.LeakyReLU(self.relu_factor),
 
-            GeneralConv1D(self.initial_features * 8, 1,
+            GeneralConv1D(features * 8, 1,
                           kernel_size=25, stride=1, padding=0)
         )
 
@@ -312,10 +317,10 @@ class MultiScaleDiscriminator(nn.Module):
     same verdict at several rates makes it judge structure instead.
     """
 
-    def __init__(self, num_scales=3):
+    def __init__(self, num_scales=3, initial_features=None):
         super().__init__()
         self.discriminators = nn.ModuleList(
-            [Discriminator() for _ in range(num_scales)])
+            [Discriminator(initial_features) for _ in range(num_scales)])
         self.downsample = nn.AvgPool1d(4, stride=2, padding=1, count_include_pad=False)
 
     def forward(self, x):
@@ -334,14 +339,18 @@ def as_scale_list(outputs):
 
 class DiscriminatorLoss(nn.Module):
 
-    def __init__(self):
+    def __init__(self, real_label=0.9):
         super().__init__()
         # Least-squares GAN. BCE saturates once the discriminator pulls ahead,
         # which starves the generator of gradient exactly when it needs it most.
         self.mse = nn.MSELoss()
+        # One-sided label smoothing: real audio is labelled 0.9, not 1.0, so the
+        # discriminator is never rewarded for total certainty. The generator
+        # still aims at 1.0, which keeps a gradient alive even when it is losing.
+        self.real_label = real_label
 
     def forward(self, outputs, is_real):
-        target = 1.0 if is_real else 0.0
+        target = self.real_label if is_real else 0.0
         outputs = as_scale_list(outputs)
         return sum(self.mse(out, torch.full_like(out, target))
                    for out in outputs) / len(outputs)
