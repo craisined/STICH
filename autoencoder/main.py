@@ -1,3 +1,5 @@
+import torch.nn as nn
+
 class ResNet(nn.Module):
     def __init__(self):
         super().__init__()
@@ -57,3 +59,11 @@ class GeneratorLoss:
         gan_loss = self.bce(disc_result, torch.ones_like(disc_result))
         cycle_consistency = self.l1(self.inverse_generator(generated_embedding), original)
         return gan_loss + self.cycle_consistency_factor * cycle_consistency
+class DiscriminatorLoss(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.bce = nn.BCEWithLogitsLoss()
+        
+    def forward(self, x, original):
+        return self.bce(x, original)
