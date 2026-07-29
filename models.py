@@ -8,7 +8,7 @@ NUM_CHANNELS = 1
 
 # Product of the encoder strides. Input lengths must be a multiple of this for
 # the decoder to land back on exactly the input length.
-TOTAL_STRIDE = 32
+TOTAL_STRIDE = 8
 
 # Lower bound on the spectral-convergence denominator. See STFTLoss.forward.
 SILENT_TARGET_FLOOR = 1.0
@@ -98,14 +98,16 @@ class GeneralDeconv2D(nn.Module):
 
 
 class ResnetBlock(nn.Module):
-    def __init__(self, num_features, dilation=1):
+    def __init__(self, num_features, dilation=1, kernel_size=9):
         super().__init__()
         self.resnet = nn.Sequential(
-            GeneralConv1D(num_features, num_features, dilation=dilation),
+            GeneralConv1D(num_features, num_features,
+                          kernel_size=kernel_size, dilation=dilation),
             nn.InstanceNorm1d(num_features),
             nn.ReLU(),
 
-            GeneralConv1D(num_features, num_features, dilation=dilation),
+            GeneralConv1D(num_features, num_features,
+                          kernel_size=kernel_size, dilation=dilation),
             nn.InstanceNorm1d(num_features)
         )
 
@@ -117,18 +119,27 @@ class ResnetBlock(nn.Module):
 class Generator(nn.Module):
 
     initial_features = 32
-    # Doubling dilations stack the resnet receptive field geometrically, which
-    # is what takes the generator from ~70 ms of context to ~3 s.
-    dilations = (1, 2, 4, 8, 16)
+
+    # Receptive field comes from dilation, not from stride. Buying it with
+    # stride instead crushes the bottleneck: at 32x downsampling the middle of
+    # the network runs at a 500 Hz frame rate, and the decoder cannot rebuild
+    # the detail -- measured 1-2 kHz output 18.7 dB below the input, which the
+    # discriminator spots instantly. At 8x with these dilations the same ~1 s of
+    # context costs only 2.2 dB there.
+    #
+    # Small kernels are also the cheap way to reach: doubling dilations with
+    # kernel 9 covers more ground per FLOP than kernel 25 ever did.
+    dilations = (1, 2, 4, 8, 16, 32, 64)
+    resnet_kernel = 9
 
     def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
-            GeneralConv1D(NUM_CHANNELS, self.initial_features, stride=4),
+            GeneralConv1D(NUM_CHANNELS, self.initial_features, stride=2),
             nn.ReLU(),
 
             GeneralConv1D(self.initial_features,
-                          self.initial_features * 2, stride=4),
+                          self.initial_features * 2, stride=2),
             nn.InstanceNorm1d(self.initial_features * 2),
             nn.ReLU(),
 
@@ -139,7 +150,8 @@ class Generator(nn.Module):
         )
 
         self.transformer = nn.Sequential(
-            *[ResnetBlock(self.initial_features * 4, dilation=dilation)
+            *[ResnetBlock(self.initial_features * 4, dilation=dilation,
+                          kernel_size=self.resnet_kernel)
               for dilation in self.dilations])
 
         self.decoder = nn.Sequential(
@@ -149,12 +161,12 @@ class Generator(nn.Module):
             nn.ReLU(),
 
             GeneralDeconv1D(self.initial_features * 2,
-                            self.initial_features, stride=4),
+                            self.initial_features, stride=2),
             nn.InstanceNorm1d(self.initial_features),
             nn.ReLU(),
 
             GeneralDeconv1D(self.initial_features,
-                            self.initial_features, stride=4),
+                            self.initial_features, stride=2),
             nn.InstanceNorm1d(self.initial_features),
             nn.ReLU(),
 

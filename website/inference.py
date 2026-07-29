@@ -28,7 +28,7 @@ TARGET_RMS = 0.1  # matches dataloader.TARGET_RMS
 PEAK_CEILING = 0.99  # matches dataloader.PEAK_CEILING
 # models.TOTAL_STRIDE. Duplicated rather than imported: this module stays free
 # of torch so the demo survives training-code changes (see module docstring).
-TOTAL_STRIDE = 32
+TOTAL_STRIDE = 8
 OUTPUT_PEAK = 0.9  # target peak amplitude, leaving a little headroom
 
 BASE = Path(__file__).parent

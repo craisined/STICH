@@ -38,10 +38,11 @@ def parse_args():
                         help="discriminators per domain, at 1x/2x/4x downsampling")
     # Levers for holding the discriminator back. Spotting fake audio is far
     # easier than generating it, so an evenly matched pair is not a fair fight.
-    parser.add_argument("--disc-lr", type=float, default=5e-5,
+    parser.add_argument("--disc-lr", type=float, default=1e-4,
                         help="discriminator learning rate; keep below --lr")
-    parser.add_argument("--disc-features", type=int, default=32,
-                        help="discriminator width per scale (generator uses 32)")
+    parser.add_argument("--disc-features", type=int, default=24,
+                        help="discriminator width per scale; 24 keeps all three "
+                             "scales together smaller than the 2.6M generator")
     parser.add_argument("--disc-every", type=int, default=1,
                         help="update the discriminators every N steps")
     parser.add_argument("--real-label", type=float, default=0.9,
