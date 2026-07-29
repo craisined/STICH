@@ -198,12 +198,10 @@
     const ctx = canvas.getContext("2d");
     const W = canvas.width, H = canvas.height;
     const pad = 24;
-    // Four decaying-with-noise series, matching the plotter's four curves.
+    // Two decaying-with-noise series, matching the plotter's two curves.
     const seeds = [
-      { color: "#e6b24e", start: 0.9, end: 0.32 },
-      { color: "#8b7bf0", start: 0.85, end: 0.30 },
-      { color: "#57c7a3", start: 1.0, end: 0.20 },
-      { color: "#ef7d92", start: 0.95, end: 0.24 },
+      { color: "#e6b24e", start: 0.9, end: 0.22 },
+      { color: "#8b7bf0", start: 0.95, end: 0.30 },
     ];
     const N = 40;
     const yOf = (v) => H - pad - v * (H - 2 * pad);

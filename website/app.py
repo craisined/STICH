@@ -2,8 +2,8 @@
 STICH demo — Flask server.
 
 Serves the static demo site and exposes a single inference endpoint,
-POST /api/convert, which runs the uploaded clip through the exported ONNX
-generator for the requested direction (see inference.py).
+POST /api/convert, which runs the uploaded clip through the autoencoder and
+shifts its embedding toward the requested direction (see inference.py).
 
 Run (from the repo root, using the repo venv):
     ./.venv/bin/python website/app.py
@@ -51,7 +51,7 @@ def convert():
     try:
         wav_bytes = inference.convert(audio_bytes, direction, filename=upload.filename)
     except FileNotFoundError as exc:
-        # No exported .onnx to run -- a setup problem, not a bad upload.
+        # No encoder or centroids to run -- a setup problem, not a bad upload.
         app.logger.error("model unavailable: %s", exc)
         return jsonify(error=str(exc)), 503
     except ValueError as exc:
