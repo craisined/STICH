@@ -10,6 +10,8 @@ data/musicnet/*
 data/musicnet_processed/*
 data/test/
 data/musicnet_10_wav_samples/*
+data/all_wavs/*
+data/processed_rave/*
 
 *.pt
 *.onnx
