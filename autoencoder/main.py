@@ -4,9 +4,9 @@ class ResNet(nn.Module):
     def __init__(self):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Conv1d(padding="same", kernel=25, in_channels=64, out_channels=64),
+            nn.Conv2d(padding="same", kernel=3, in_channels=64, out_channels=64),
             nn.ReLU(),
-            nn.Conv1d(padding="same", kernel=25, in_channels=64, out_channels=64)
+            nn.Conv2d(padding="same", kernel=3, in_channels=64, out_channels=64)
         )
 
     def forward(self, inp):
