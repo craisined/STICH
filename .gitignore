@@ -19,3 +19,4 @@ plots
 models
 logs
 output
+samples/*

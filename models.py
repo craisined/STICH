@@ -1,3 +1,5 @@
+import random
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -246,8 +248,14 @@ class GeneratorLoss(nn.Module):
         self.stft = MultiResolutionSTFTLoss()
 
     def forward(self, x, original):
-        disc_logits = self.discriminator(x)
-        gan_loss = self.mse(disc_logits, torch.ones_like(disc_logits))
+        # Reach through DDP to the raw discriminator. This pass only needs the
+        # verdict, not synchronised discriminator gradients, and skipping the
+        # wrapper means main.py can freeze the discriminator here without
+        # tripping DDP's "parameter received no gradient" check.
+        discriminator = getattr(self.discriminator, "module", self.discriminator)
+        disc_outputs = as_scale_list(discriminator(x))
+        gan_loss = sum(self.mse(out, torch.ones_like(out))
+                       for out in disc_outputs) / len(disc_outputs)
 
         # Cycle consistency is measured spectrally. Waveform L1 alone cannot
         # tell a harmonic signal from noise with the same envelope, so it was
@@ -296,6 +304,34 @@ class Discriminator(nn.Module):
         return self.nn(x)
 
 
+class MultiScaleDiscriminator(nn.Module):
+    """One Discriminator per time scale, judging the same audio at 1x, 2x, 4x.
+
+    A single-scale waveform discriminator tends to fixate on local texture,
+    which the generator can satisfy with the right kind of hiss. Forcing the
+    same verdict at several rates makes it judge structure instead.
+    """
+
+    def __init__(self, num_scales=3):
+        super().__init__()
+        self.discriminators = nn.ModuleList(
+            [Discriminator() for _ in range(num_scales)])
+        self.downsample = nn.AvgPool1d(4, stride=2, padding=1, count_include_pad=False)
+
+    def forward(self, x):
+        outputs = []
+        for index, discriminator in enumerate(self.discriminators):
+            outputs.append(discriminator(x))
+            if index < len(self.discriminators) - 1:
+                x = self.downsample(x)
+        return outputs
+
+
+def as_scale_list(outputs):
+    """Accept either a single discriminator output or one per scale."""
+    return outputs if isinstance(outputs, (list, tuple)) else [outputs]
+
+
 class DiscriminatorLoss(nn.Module):
 
     def __init__(self):
@@ -304,5 +340,40 @@ class DiscriminatorLoss(nn.Module):
         # which starves the generator of gradient exactly when it needs it most.
         self.mse = nn.MSELoss()
 
-    def forward(self, x, original):
-        return self.mse(x, original)
+    def forward(self, outputs, is_real):
+        target = 1.0 if is_real else 0.0
+        outputs = as_scale_list(outputs)
+        return sum(self.mse(out, torch.full_like(out, target))
+                   for out in outputs) / len(outputs)
+
+
+class ReplayPool:
+    """Buffer of previously generated samples, as in the original CycleGAN.
+
+    Showing the discriminator only the generator's newest output lets the two
+    chase each other: the discriminator specialises on the current artefact,
+    the generator moves, and neither settles. Mixing in older fakes keeps the
+    discriminator honest about a history of outputs.
+    """
+
+    def __init__(self, capacity=50):
+        self.capacity = capacity
+        self.items = []
+
+    def query(self, batch):
+        if self.capacity == 0:
+            return batch
+
+        chosen = []
+        for sample in batch:
+            sample = sample.unsqueeze(0)
+            if len(self.items) < self.capacity:
+                self.items.append(sample.detach().clone())
+                chosen.append(sample)
+            elif random.random() < 0.5:
+                index = random.randrange(self.capacity)
+                chosen.append(self.items[index].clone())
+                self.items[index] = sample.detach().clone()
+            else:
+                chosen.append(sample)
+        return torch.cat(chosen, dim=0)
