@@ -45,3 +45,15 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         return self.network(x)
+
+class GeneratorLoss:
+    def __init__(self, cycle_consistency_factor = 10):
+        super().__init__()
+        self.bce = nn.BCEWithLogitsLoss()
+        self.l1 = nn.L1Loss()
+    
+    def forward(self, generated_embedding, original, inverse_generator, discriminator):
+        disc_result = discriminator(generated_embedding)
+        gan_loss = self.bce(disc_result, torch.ones_like(disc_result))
+        cycle_consistency = self.l1(self.inverse_generator(generated_embedding), original)
+        return gan_loss + self.cycle_consistency_factor * cycle_consistency
