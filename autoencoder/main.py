@@ -49,19 +49,19 @@ class Generator(nn.Module):
     def __init__(self):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Conv1d(16, 64, kernel_size=3, padding="same"),
+            nn.Conv1d(16, 64, kernel_size=25, padding="same"),
             ResNet(),
             nn.ReLU(),
             ResNet(),
             nn.ReLU(),
             ResNet(),
-            nn.Conv1d(64, 16, kernel_size=3, padding="same"),
+            nn.Conv1d(64, 16, kernel_size=25, padding="same"),
         )
 
     def forward(self, inp):
         return self.network(inp)
 
-
+"""
 # 3. Discriminator Architecture
 class Discriminator(nn.Module):
     def __init__(self):
@@ -78,6 +78,22 @@ class Discriminator(nn.Module):
     def forward(self, x):
         x = self.pool(x).squeeze(-1)  # (Batch, 16)
         return self.network(x)
+"""
+# 3. Patch1D Discriminator (Preserves temporal structural cues)
+class Discriminator(nn.Module):
+    def __init__(self, in_channels=16):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Conv1d(in_channels, 64, kernel_size=32, stride=2, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv1d(64, 128, kernel_size=32, stride=2, padding=1),
+            nn.InstanceNorm1d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv1d(128, 1, kernel_size=32, stride=1, padding=1),
+        )
+
+    def forward(self, x):
+        return self.net(x)
 
 
 # 4. Loss Functions
@@ -121,7 +137,7 @@ disc_classical = Discriminator().to(device)
 disc_humming = Discriminator().to(device)
 
 # Initialize Loss Functions
-criterion_G = GeneratorLoss(cycle_consistency_factor=10).to(device)
+criterion_G = GeneratorLoss(cycle_consistency_factor=5).to(device)
 criterion_D = DiscriminatorLoss().to(device)
 
 # Initialize Optimizers
@@ -149,7 +165,7 @@ train_loader = DataLoader(
 )
 
 def main():
-    epochs = 10
+    epochs = 20
 
     for epoch in range(epochs):
         gen_humming_to_classical.train()
