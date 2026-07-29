@@ -84,12 +84,12 @@ class Discriminator(nn.Module):
     def __init__(self, in_channels=16):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Conv1d(in_channels, 64, kernel_size=32, stride=2, padding=1),
+            nn.Conv1d(in_channels, 64, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv1d(64, 128, kernel_size=32, stride=2, padding=1),
+            nn.Conv1d(64, 128, kernel_size=4, stride=2, padding=1),
             nn.InstanceNorm1d(128),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv1d(128, 1, kernel_size=32, stride=1, padding=1),
+            nn.Conv1d(128, 1, kernel_size=4, stride=1, padding=1),
         )
 
     def forward(self, x):
