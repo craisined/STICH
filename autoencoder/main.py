@@ -34,10 +34,10 @@ class ResNet(nn.Module):
     def __init__(self, channels=64):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Conv1d(channels, channels, kernel_size=3, padding="same"),
+            nn.Conv1d(channels, channels, kernel_size=25, padding="same"),
             nn.InstanceNorm1d(channels),
             nn.ReLU(),
-            nn.Conv1d(channels, channels, kernel_size=3, padding="same"),
+            nn.Conv1d(channels, channels, kernel_size=25, padding="same"),
             nn.InstanceNorm1d(channels),
         )
 
