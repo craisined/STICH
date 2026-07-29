@@ -103,8 +103,7 @@ class GeneratorLoss(nn.Module):
         self.cycle_consistency_factor = cycle_consistency_factor
         self.identity_factor = identity_factor
         self.bce = nn.BCEWithLogitsLoss()
-        self.l1_cycle = nn.L1Loss()
-        self.l1_identity = nn.L1Loss()
+        self.l1 = nn.L1Loss()
 
 
     def forward(self, generated_embedding, original, generator, inverse_generator, discriminator):
@@ -112,10 +111,10 @@ class GeneratorLoss(nn.Module):
         gan_loss = self.bce(disc_result, torch.ones_like(disc_result))
         
         reconstructed = inverse_generator(generated_embedding)
-        cycle_consistency = self.l1_cycle(reconstructed, original)
+        cycle_consistency = self.l1(reconstructed, original)
 
         identity = generator(generated_embedding)
-        identity_consistency = self.l1_identity(identity, original)
+        identity_consistency = self.l1(identity, original)
         
         return gan_loss + (self.cycle_consistency_factor * cycle_consistency) + (self.identity_factor * identity_consistency)
 
@@ -218,6 +217,7 @@ def main():
             loss_G_humming_to_classical = criterion_G(
                 generated_embedding=fake_classical,
                 original=humming,
+                generator=gen_humming_to_classical,
                 inverse_generator=gen_classical_to_humming,
                 discriminator=disc_classical
             )
@@ -225,6 +225,7 @@ def main():
             loss_G_classical_to_humming = criterion_G(
                 generated_embedding=fake_humming,
                 original=classical,
+                generator=gen_classical_to_humming,
                 inverse_generator=gen_humming_to_classical,
                 discriminator=disc_humming
             )
