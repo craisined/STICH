@@ -85,7 +85,7 @@
     <section class="section section--alt" id="how">
       <div class="section__head">
         <h2>How it works</h2>
-        <p class="section__lead">One map of sound, and a step across it.</p>
+        <p class="section__lead">One map of sound, and a guide across it.</p>
       </div>
 
       <div class="how-grid">
@@ -97,18 +97,18 @@
             from that point again.</p>
         </div>
         <div class="how-card">
-          <div class="how-card__icon">📍</div>
-          <h3>The two landmarks</h3>
-          <p>Thousands of hums land in one region of that map, thousands of
-            classical clips in another. Average each pile and you get a landmark
-            for "sounds hummed" and one for "sounds classical."</p>
+          <div class="how-card__icon">🎭</div>
+          <h3>The forger</h3>
+          <p>A second network learns to move a point from the humming region of
+            that map to the classical one — trained against a critic whose whole
+            job is to spot points that only <em>pretend</em> to be classical.</p>
         </div>
         <div class="how-card">
-          <div class="how-card__icon">➕</div>
-          <h3>The step</h3>
-          <p>Find your clip on the map, step away from the humming landmark and
-            the same distance toward the classical one, then rebuild the audio
-            from where you land.</p>
+          <div class="how-card__icon">🔁</div>
+          <h3>The round trip</h3>
+          <p>A matching network moves points back the other way, and the pair is
+            scored on whether a hum survives the trip out and home again. That is
+            what keeps your melody intact while the style changes.</p>
         </div>
       </div>
 
@@ -117,17 +117,17 @@
           <span class="node node--hum">🎤 Your hum</span>
           <span class="edge"><span class="edge__label">encode →</span></span>
           <span class="node node--emb">📍 A point on the map</span>
-          <span class="edge"><span class="edge__label">− hum + classical →</span></span>
+          <span class="edge"><span class="edge__label">generator →</span></span>
           <span class="node node--cls">🎻 Classical</span>
         </div>
-        <figcaption>Encode to a point, swap the humming landmark for the classical
-          one, decode back to audio. The melody rides along; only the style moves.</figcaption>
+        <figcaption>Encode to a point, let the generator carry it across the map,
+          decode back to audio. The melody rides along; only the style moves.</figcaption>
       </figure>
       <p class="tech-note">
         In machine-learning terms: an <strong>autoencoder</strong> over raw audio
-        plus <strong>vector arithmetic</strong> on its latent embeddings —
-        subtract the mean embedding of one domain, add the mean of the other,
-        decode. No adversarial training, and still no paired examples.
+        with a <strong>CycleGAN</strong> operating on its latent embeddings — two
+        generators, one per direction, trained adversarially under a
+        cycle-consistency loss. Still no paired examples.
       </p>
     </section>
 
@@ -143,17 +143,17 @@
         <span class="chip chip--cls">🎻 Classical</span></h3>
       <div class="gallery">
         <div class="pair-card">
-          <div class="pair-card__title">A gentle tune</div>
+          <div class="pair-card__title">Hummed melody · one</div>
           <div class="player" data-src="/examples/humming_1.wav" data-label="Original hum"></div>
           <div class="player player--out" data-src="/examples/classical_1.wav" data-label="STICH classical"></div>
         </div>
         <div class="pair-card">
-          <div class="pair-card__title">A cheerful melody</div>
+          <div class="pair-card__title">Hummed melody · two</div>
           <div class="player" data-src="/examples/humming_2.wav" data-label="Original hum"></div>
           <div class="player player--out" data-src="/examples/classical_2.wav" data-label="STICH classical"></div>
         </div>
         <div class="pair-card">
-          <div class="pair-card__title">A slow ballad</div>
+          <div class="pair-card__title">Hummed melody · three</div>
           <div class="player" data-src="/examples/humming_3.wav" data-label="Original hum"></div>
           <div class="player player--out" data-src="/examples/classical_3.wav" data-label="STICH classical"></div>
         </div>
@@ -164,12 +164,12 @@
         <span class="chip chip--hum">🎤 Humming</span></h3>
       <div class="gallery">
         <div class="pair-card">
-          <div class="pair-card__title">Classical phrase A</div>
+          <div class="pair-card__title">Classical phrase · one</div>
           <div class="player" data-src="/examples/classical_4.wav" data-label="Original classical"></div>
           <div class="player player--out" data-src="/examples/humming_4.wav" data-label="STICH hum"></div>
         </div>
         <div class="pair-card">
-          <div class="pair-card__title">Classical phrase B</div>
+          <div class="pair-card__title">Classical phrase · two</div>
           <div class="player" data-src="/examples/classical_5.wav" data-label="Original classical"></div>
           <div class="player player--out" data-src="/examples/humming_5.wav" data-label="STICH hum"></div>
         </div>
@@ -184,13 +184,14 @@
             <div class="player player--out" data-src="/examples/cycle_classical.wav" data-label="2 · As classical"></div>
             <div class="player" data-src="/examples/cycle_hum_out.wav" data-label="3 · Back to hum"></div>
           </div>
-          <p class="pair-card__note">Steps 1 and 3 should sound close — the step across
-            the map is reversible, so the melody should survive the trip.</p>
+          <p class="pair-card__note">Steps 1 and 3 should sound close — the two generators
+            are trained to undo each other, so the melody should survive the trip.</p>
         </div>
       </div>
 
-      <p class="placeholder-banner">🔧 These are <strong>placeholder</strong> clips
-        until the trained model is ready. The players and layout are final.</p>
+      <p class="note">Every clip on this page is real model output. The originals
+        are drawn from the datasets, and the translations come from the same
+        endpoint the box below calls — there is no separate demo path.</p>
     </section>
 
     <!-- ===== Try ===== -->
@@ -244,9 +245,11 @@
           </div>
         </div>
 
-        <p class="placeholder-banner">🔧 <strong>Experimental:</strong> your upload
-          really is run through the trained model. It is an early checkpoint, so
-          expect rough output. Clips are trimmed to the first 10 seconds.</p>
+        <p class="note">Your upload runs through the live model on this machine —
+          nothing is sent anywhere else. Clips are trimmed to the first
+          10&nbsp;seconds, and the first conversion after the server starts takes
+          a moment longer while the model loads. It is a research checkpoint, so
+          expect character rather than polish.</p>
       </div>
     </section>
 
@@ -256,41 +259,59 @@
         <h2>Under the hood</h2>
         <p class="section__lead">For the curious.</p>
       </div>
+      <div class="statbar">
+        <div class="stat">
+          <div class="stat__n">128<span class="stat__u">×</span></div>
+          <div class="stat__k">compression into the latent space</div>
+        </div>
+        <div class="stat">
+          <div class="stat__n">3,744</div>
+          <div class="stat__k">numbers per 10-second clip</div>
+        </div>
+        <div class="stat">
+          <div class="stat__n">26,740</div>
+          <div class="stat__k">training clips, none of them paired</div>
+        </div>
+      </div>
+
       <div class="facts">
         <div class="fact">
           <div class="fact__k">Model</div>
-          <div class="fact__v">Autoencoder over raw audio; style transfer is vector arithmetic on its latent embeddings.</div>
+          <div class="fact__v">Autoencoder over raw audio; style transfer is a CycleGAN over its latent embeddings.</div>
+        </div>
+        <div class="fact">
+          <div class="fact__k">The latent space</div>
+          <div class="fact__v">A 10-second clip — 480,000 samples — becomes 16&nbsp;channels × 234 frames. The generators only ever work in here, never on the waveform.</div>
+        </div>
+        <div class="fact">
+          <div class="fact__k">Generators</div>
+          <div class="fact__v">One per direction, ≈1.1&nbsp;M parameters each: five residual blocks of wide 1-D convolutions, kept at full length end to end.</div>
+        </div>
+        <div class="fact">
+          <div class="fact__k">Discriminators</div>
+          <div class="fact__v">A 38&nbsp;K-parameter 1-D patch critic per domain, judging stretches of the embedding rather than the clip as a whole.</div>
+        </div>
+        <div class="fact">
+          <div class="fact__k">Training signal</div>
+          <div class="fact__v">Adversarial loss, plus cycle-consistency and identity terms — what keeps the melody through the translation.</div>
         </div>
         <div class="fact">
           <div class="fact__k">Humming data</div>
-          <div class="fact__v">HumTrans — thousands of recorded hummed melodies.</div>
+          <div class="fact__v">HumTrans — 14,614 processed clips of recorded hummed melodies.</div>
         </div>
         <div class="fact">
           <div class="fact__k">Classical data</div>
-          <div class="fact__v">MusicNet — hundreds of classical recordings.</div>
+          <div class="fact__v">MusicNet — 12,126 processed clips from classical recordings.</div>
         </div>
         <div class="fact">
           <div class="fact__k">Audio format</div>
           <div class="fact__v">Mono 10-second clips — 16&nbsp;kHz on disk, resampled to 48&nbsp;kHz for the model, which returns 48&nbsp;kHz.</div>
         </div>
         <div class="fact">
-          <div class="fact__k">Training</div>
-          <div class="fact__v">PyTorch, multi-GPU (DDP) with mixed precision.</div>
-        </div>
-        <div class="fact">
           <div class="fact__k">This site</div>
-          <div class="fact__v">Plain HTML, CSS &amp; JavaScript, with a Flask server for the model.</div>
+          <div class="fact__v">Plain HTML, CSS &amp; JavaScript, with a Flask server running PyTorch for the model.</div>
         </div>
       </div>
-
-      <figure class="chart-card">
-        <figcaption>Training loss (illustrative — real plots will replace this)</figcaption>
-        <canvas id="lossChart" width="720" height="300"></canvas>
-        <div class="chart-legend">
-          <span><i class="sw sw--1"></i>Reconstruction loss</span>
-          <span><i class="sw sw--2"></i>Validation loss</span>
-        </div>
-      </figure>
     </section>
   </main>
 

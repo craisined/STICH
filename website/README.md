@@ -3,17 +3,17 @@
 A local demo site for the STICH model (humming ⇄ classical music).
 Plain HTML/CSS/JS front end, Flask back end for the model.
 
-> **Current stage: live model.** "Try it yourself" runs your upload — or a
-> clip you hum straight into the mic — through the autoencoder and a style
-> shift in embedding space. Real output, from an early checkpoint.
-> The "Hear it" gallery still uses **synthesized placeholder** clips —
-> run `gen_examples.py` to replace them with real model output.
+> **Current stage: presentable.** Every clip on the page is real model output.
+> "Try it yourself" runs your upload — or a clip you hum straight into the mic —
+> through the autoencoder and a CycleGAN generator in latent space, and the
+> "Hear it" gallery is rendered by `gen_examples.py` through that same code
+> path. No placeholders and no synthesized stand-ins remain.
 
-Needs three files the training side produces, none of them in git (see
-`.gitignore`): `encoder.ts` and the two centroids `humming_embedding.npy` /
-`classical_embedding.npy`. `inference.py` looks for them in the repo root,
-then `../models/`, then this directory, and `/api/convert` answers 503 with
-the paths it searched if they are missing.
+Needs three files the training side produces. `encoder.ts` is not in git (see
+`.gitignore`); the two generator checkpoints `gen_humming_to_classical.pth` /
+`gen_classical_to_humming.pth` are. `inference.py` looks for all three in the
+repo root, then `../models/`, then this directory, and `/api/convert` answers
+503 with the paths it searched if they are missing.
 
 ## Run it
 
@@ -43,10 +43,10 @@ python3 -m venv .venv
 ```
 website/
   app.py              # Flask: serves the site + POST /api/convert
-  inference.py        # convert() — decode → encode → style shift → decode → WAV
-  encoder.ts, *.npy   # optional fallback copies; the repo root wins
+  inference.py        # convert() — decode → encode → generator → decode → WAV
+  main.py             # CycleGAN training script; inference.py takes Generator from it
+  encoder.ts, *.pth   # optional fallback copies; the repo root wins
   gen_examples.py     # rebuilds static/examples/ from real model output
-  gen_placeholders.py # the synthesized stand-ins; delete once the real ones land
   requirements.txt
   static/
     index.html
@@ -57,17 +57,19 @@ website/
 
 ## How inference works
 
-Same path as `../model_pipeline.py`, rebuilt against an upload instead of a
-`.npy` from the training set:
+The autoencoder supplies the latent space; a CycleGAN generator does the
+translation inside it:
 
 1. Decode to 16 kHz mono, repeat the preprocessing the training data went
    through (`data/process_humtrans.py` for humming, `data/process_musicnet.py`
    for classical), pad to exactly 10 s.
-2. Resample to the model's 48 kHz. Padding comes **first** — the centroids are
-   averages over encodings of exactly 160 000 samples at 16 kHz, so a
+2. Resample to the model's 48 kHz. Padding comes **first** — the generators
+   were trained on encodings of exactly 160 000 samples at 16 kHz, so a
    different length would not line up with them.
-3. `model.encode()`, scale to unit norm, subtract the source centroid and add
-   the target one, rescale to the original norm, `model.decode()`.
+3. `model.encode()` to a `(1, 16, 234)` embedding, run it through the
+   generator for the requested direction, `model.decode()`. The generators saw
+   raw encoder output in training, so nothing is normalized on the way in or
+   out — unlike the centroid arithmetic this replaced, which needed unit norm.
 4. Normalize the peak to 0.95 and fade 15 ms at each edge (the same thing
    `audio_utils.process_audio` does), then write a 48 kHz mono WAV.
 
@@ -83,8 +85,35 @@ clean 3× ratio, and it keeps torchaudio off the server's dependency list.
 The decoder's output is not confined to [-1, 1], so `_postprocess()` normalizes
 before encoding — otherwise the 16-bit WAV would clip flat.
 
-The encoder and centroids load on first use and are cached, so the first
+The encoder and both generators load on first use and are cached, so the first
 conversion after a restart is a beat slower.
+
+`inference.py` pulls the `Generator` class out of `main.py` — the training
+script the checkpoints were saved from, so the architecture cannot drift away
+from the weights. It loads that file by path rather than with `import main`,
+because the repo root holds a different `main.py` that would otherwise win.
+
+### Two generator architectures
+
+The checkpoints are retrained often and land one direction at a time, so the
+pair is regularly mid-swap — one file from the new run, one still from the old.
+`_build()` reads each checkpoint's keys and picks its architecture, so the
+direction that is current keeps working while the other is re-exported:
+
+- **batch norm** (`running_mean` in the keys) → `Generator` from `main.py`.
+- **weight norm** (`weight_g` / `weight_v`) → `WeightNormGenerator` in
+  `inference.py`: the same five-block layout, weight-normalized pre-activation
+  residual blocks instead of batch norm.
+
+`WeightNormGenerator` is reconstructed from the checkpoint's keys. Those pin
+every shape, but **not the activations** — those carry no weights, so a wrong
+guess there loads cleanly and quietly degrades the audio rather than erroring.
+It assumes `nn.LeakyReLU()` at the unparameterized slots, matching `main.py`.
+Once `main.py` is synced with the training run, move the class into it and
+delete the copy here.
+
+A checkpoint matching neither architecture raises with the offending filename,
+and `/api/convert` answers 503 with that message.
 
 ## Mic recording
 
@@ -98,11 +127,12 @@ which `127.0.0.1` counts as; over a LAN address the browser will refuse.
 ## After retraining
 
 1. Drop the new `encoder.ts` at the repo root (or in `../models/`).
-2. **Recompute both centroids** — `model_pipeline.save_embeddings()`. A mean
-   embedding only means anything in the latent space it was averaged in, so
-   stale `.npy` files with a new encoder produce noise, not an error.
-3. Nothing else for "Try it yourself" — `inference.py` picks both up from the
-   repo root.
+2. **Retrain both generators** — `main.py`. A generator only means anything in
+   the latent space it was trained in, so stale `.pth` files with a new encoder
+   produce noise, not an error. Same if the `Generator` architecture in
+   `main.py` changes without new weights: that fails loudly at load instead.
+3. Nothing else for "Try it yourself" — `inference.py` picks all three up from
+   the repo root.
 4. **Rebuild the gallery** so it shows the new checkpoint:
 
    ```bash
@@ -131,9 +161,10 @@ Two things to know before committing the result:
 
 - **Listen first.** These pairs are the first thing a visitor hears, and a bad
   draw makes the model sound worse than it is.
-- **Size.** Real clips are about 8 MB against the placeholders' 0.9 MB, and
-  `computePeaks` in `js/main.js` fetches every one of them on page load to draw
-  its waveform. Worth revisiting if the demo ever leaves localhost.
+- **Size.** The thirteen clips total about 12 MB, and `computePeaks` in
+  `js/main.js` fetches every one of them on page load to draw its waveform.
+  Worth revisiting if the demo ever leaves localhost.
 
-Once real clips are in, drop the two `placeholder-banner` paragraphs from
-`index.html` and delete `gen_placeholders.py`.
+The clips currently committed were drawn with `--seed 0`. The card titles in
+`index.html` are deliberately generic ("Hummed melody · one"), so a re-roll does
+not leave the page describing clips it no longer plays.

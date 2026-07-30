@@ -51,8 +51,13 @@ def convert():
     try:
         wav_bytes = inference.convert(audio_bytes, direction, filename=upload.filename)
     except FileNotFoundError as exc:
-        # No encoder or centroids to run -- a setup problem, not a bad upload.
+        # No encoder or checkpoints to run -- a setup problem, not a bad upload.
         app.logger.error("model unavailable: %s", exc)
+        return jsonify(error=str(exc)), 503
+    except RuntimeError as exc:
+        # A checkpoint that does not fit its architecture. Also a setup problem,
+        # and the message names the file -- worth showing instead of burying.
+        app.logger.error("model unusable: %s", exc)
         return jsonify(error=str(exc)), 503
     except ValueError as exc:
         # Bad upload -- the message is written for the person who chose it.

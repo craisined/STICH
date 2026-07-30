@@ -9,8 +9,8 @@ then exactly what the "Try it yourself" box would produce for those clips.
 Run (from the repo root, using the repo venv):
     ./.venv/bin/python website/gen_examples.py
 
-Needs what inference.py needs -- encoder.ts plus the two centroid .npy files --
-and the processed datasets in ../data/. Overwrites static/examples/ in place,
+Needs what inference.py needs -- encoder.ts plus the two generator .pth
+checkpoints -- and the processed datasets in ../data/. Overwrites static/examples/ in place,
 so listen to the results before committing them: these pairs are the first
 thing a visitor hears, and a bad draw makes the model look worse than it is.
 Re-roll the selection with --seed until a set sounds right, then record the
@@ -90,7 +90,7 @@ def main():
         (OUT_DIR / name).write_bytes(wav_bytes)
 
     print(f"\nWrote {len(clips)} clips (seed {args.seed}). Listen before committing.")
-    print("If they hold up, drop the two 'placeholder' banners from index.html.")
+    print("If a draw sounds poor, re-roll with --seed and note the one you keep.")
 
 
 def _pick(folder, count, rng):

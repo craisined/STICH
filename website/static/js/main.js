@@ -191,46 +191,6 @@
     frame();
   }
 
-  /* ===== Illustrative loss chart ===== */
-  function lossChart() {
-    const canvas = document.getElementById("lossChart");
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    const W = canvas.width, H = canvas.height;
-    const pad = 24;
-    // Two decaying-with-noise series, matching the plotter's two curves.
-    const seeds = [
-      { color: "#e6b24e", start: 0.9, end: 0.22 },
-      { color: "#8b7bf0", start: 0.95, end: 0.30 },
-    ];
-    const N = 40;
-    const yOf = (v) => H - pad - v * (H - 2 * pad);
-    const xOf = (i) => pad + (i / (N - 1)) * (W - 2 * pad);
-
-    // grid
-    ctx.strokeStyle = "rgba(255,255,255,0.06)";
-    ctx.lineWidth = 1;
-    for (let g = 0; g <= 4; g++) {
-      const y = pad + (g / 4) * (H - 2 * pad);
-      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
-    }
-
-    seeds.forEach((s, si) => {
-      ctx.strokeStyle = s.color;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (let i = 0; i < N; i++) {
-        const p = i / (N - 1);
-        const base = s.start + (s.end - s.start) * Math.pow(p, 0.6);
-        const noise = Math.sin(i * (1.3 + si * 0.4) + si) * 0.04 * (1 - p);
-        const v = Math.max(0.02, base + noise);
-        const x = xOf(i), y = yOf(v);
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    });
-  }
-
   /* ===== Try-it upload flow ===== */
   function tryIt() {
     const form = document.getElementById("convertForm");
@@ -428,7 +388,6 @@
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".gallery .player[data-src]").forEach((el) => new AudioPlayer(el));
     heroWave();
-    lossChart();
     tryIt();
   });
 })();
