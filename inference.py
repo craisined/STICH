@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torchaudio
-from main import Generator, Discriminator
+from train import Generator, Discriminator
 import soundfile as sf
 from pathlib import Path
 import random
