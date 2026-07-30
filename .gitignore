@@ -18,6 +18,7 @@ data/processed_rave/*
 *bak
 *.ts
 *.npy
+*.pth
 
 plots
 models
