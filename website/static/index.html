@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STICH — Humming ⇄ Classical</title>
+  <title>STICH — Humming → Classical</title>
   <link rel="stylesheet" href="/css/styles.css" />
   <link rel="icon"
         href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎼</text></svg>" />
@@ -29,11 +29,11 @@
     <div class="hero__inner">
       <p class="eyebrow">A machine-learning project</p>
       <h1 class="hero__title">Turn <span class="accent-hum">humming</span> into
-        <span class="accent-cls">classical music</span><span class="hero__dash">—</span>and back.</h1>
+        <span class="accent-cls">classical music</span>.</h1>
       <p class="hero__sub">
-        STICH is an AI that translates between two musical worlds: the tune you
-        hum and a richer classical rendition of it. Hum a melody, hear it
-        reimagined. Play a classical phrase, hear how someone might hum it.
+        STICH is an AI that carries a melody from one musical world into
+        another: the tune you hum comes back as a richer classical rendition of
+        itself. Hum a melody, hear it reimagined.
       </p>
       <div class="hero__cta">
         <a class="btn btn--primary" href="#listen">Hear examples</a>
@@ -56,8 +56,7 @@
             When you translate a sentence from English to Spanish, the meaning
             stays the same but the words change. STICH does the same thing with
             <strong>music</strong>. It takes a simple hummed melody and re-voices
-            it in a <strong>classical</strong> style — and it can go the other
-            direction too.
+            it in a <strong>classical</strong> style.
           </p>
           <p>
             The clever part: <strong>nobody handed it matched examples</strong>.
@@ -71,11 +70,6 @@
             <span class="chip chip--hum">🎤 Humming</span>
             <span class="translate-arrow">→</span>
             <span class="chip chip--cls">🎻 Classical</span>
-          </div>
-          <div class="translate-row translate-row--rev">
-            <span class="chip chip--cls">🎻 Classical</span>
-            <span class="translate-arrow">→</span>
-            <span class="chip chip--hum">🎤 Humming</span>
           </div>
         </div>
       </div>
@@ -105,10 +99,11 @@
         </div>
         <div class="how-card">
           <div class="how-card__icon">🔁</div>
-          <h3>The round trip</h3>
-          <p>A matching network moves points back the other way, and the pair is
-            scored on whether a hum survives the trip out and home again. That is
-            what keeps your melody intact while the style changes.</p>
+          <h3>The safety check</h3>
+          <p>While training, a helper network learns to undo that move, and the
+            forger is graded on whether a hum still sounds like itself after
+            going out and coming home. That is what keeps your melody intact
+            while the style changes.</p>
         </div>
       </div>
 
@@ -125,9 +120,10 @@
       </figure>
       <p class="tech-note">
         In machine-learning terms: an <strong>autoencoder</strong> over raw audio
-        with a <strong>CycleGAN</strong> operating on its latent embeddings — two
-        generators, one per direction, trained adversarially under a
-        cycle-consistency loss. Still no paired examples.
+        with a <strong>CycleGAN</strong> operating on its latent embeddings —
+        trained adversarially under a cycle-consistency loss, with a helper
+        generator supplying the return leg that loss is measured on. Still no
+        paired examples.
       </p>
     </section>
 
@@ -159,36 +155,6 @@
         </div>
       </div>
 
-      <h3 class="group-title"><span class="chip chip--cls">🎻 Classical</span>
-        <span class="group-arrow">→</span>
-        <span class="chip chip--hum">🎤 Humming</span></h3>
-      <div class="gallery">
-        <div class="pair-card">
-          <div class="pair-card__title">Classical phrase · one</div>
-          <div class="player" data-src="/examples/classical_4.wav" data-label="Original classical"></div>
-          <div class="player player--out" data-src="/examples/humming_4.wav" data-label="STICH hum"></div>
-        </div>
-        <div class="pair-card">
-          <div class="pair-card__title">Classical phrase · two</div>
-          <div class="player" data-src="/examples/classical_5.wav" data-label="Original classical"></div>
-          <div class="player player--out" data-src="/examples/humming_5.wav" data-label="STICH hum"></div>
-        </div>
-      </div>
-
-      <h3 class="group-title">🔁 The round-trip demo</h3>
-      <div class="gallery">
-        <div class="pair-card pair-card--wide">
-          <div class="pair-card__title">Hum → Classical → Hum</div>
-          <div class="cycle-players">
-            <div class="player" data-src="/examples/cycle_hum_in.wav" data-label="1 · Original hum"></div>
-            <div class="player player--out" data-src="/examples/cycle_classical.wav" data-label="2 · As classical"></div>
-            <div class="player" data-src="/examples/cycle_hum_out.wav" data-label="3 · Back to hum"></div>
-          </div>
-          <p class="pair-card__note">Steps 1 and 3 should sound close — the two generators
-            are trained to undo each other, so the melody should survive the trip.</p>
-        </div>
-      </div>
-
       <p class="note">Every clip on this page is real model output. The originals
         are drawn from the datasets, and the translations come from the same
         endpoint the box below calls — there is no separate demo path.</p>
@@ -198,18 +164,11 @@
     <section class="section section--alt" id="try">
       <div class="section__head">
         <h2>Try it yourself</h2>
-        <p class="section__lead">Upload a short clip and hear STICH translate it.</p>
+        <p class="section__lead">Upload a short hum and hear STICH translate it into classical.</p>
       </div>
 
       <div class="try">
         <form class="try__form" id="convertForm">
-          <div class="try__direction" role="group" aria-label="Direction">
-            <input type="radio" name="direction" id="dir-h2c" value="humming_to_classical" checked />
-            <label for="dir-h2c">🎤 Humming → 🎻 Classical</label>
-            <input type="radio" name="direction" id="dir-c2h" value="classical_to_humming" />
-            <label for="dir-c2h">🎻 Classical → 🎤 Humming</label>
-          </div>
-
           <label class="dropzone" id="dropzone">
             <input type="file" id="fileInput" accept="audio/*,.wav" hidden />
             <span class="dropzone__icon">🎵</span>
@@ -277,15 +236,15 @@
       <div class="facts">
         <div class="fact">
           <div class="fact__k">Model</div>
-          <div class="fact__v">Autoencoder over raw audio; style transfer is a CycleGAN over its latent embeddings.</div>
+          <div class="fact__v">Autoencoder over raw audio; the humming-to-classical transfer is a CycleGAN over its latent embeddings.</div>
         </div>
         <div class="fact">
           <div class="fact__k">The latent space</div>
-          <div class="fact__v">A 10-second clip — 480,000 samples — becomes 16&nbsp;channels × 234 frames. The generators only ever work in here, never on the waveform.</div>
+          <div class="fact__v">A 10-second clip — 480,000 samples — becomes 16&nbsp;channels × 234 frames. The generator only ever works in here, never on the waveform.</div>
         </div>
         <div class="fact">
-          <div class="fact__k">Generators</div>
-          <div class="fact__v">One per direction, ≈1.1&nbsp;M parameters each: five residual blocks of wide 1-D convolutions, kept at full length end to end.</div>
+          <div class="fact__k">Generator</div>
+          <div class="fact__v">≈1.1&nbsp;M parameters: five residual blocks of wide 1-D convolutions, kept at full length end to end. A twin of the same shape learns the return leg during training, purely to supply the cycle loss.</div>
         </div>
         <div class="fact">
           <div class="fact__k">Discriminators</div>

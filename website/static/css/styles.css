@@ -98,7 +98,6 @@ code {
   margin: 0 0 1.2rem;
   max-width: 15ch;
 }
-.hero__dash { opacity: 0.5; padding: 0 0.15em; }
 .hero__sub {
   max-width: 56ch;
   font-size: clamp(1rem, 1.7vw, 1.2rem);
@@ -256,10 +255,7 @@ code {
   display: grid;
   gap: 0.8rem;
 }
-.pair-card--wide { grid-column: 1 / -1; }
 .pair-card__title { font-weight: 600; font-family: var(--serif); font-size: 1.1rem; }
-.pair-card__note { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.9rem; }
-.cycle-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.8rem; }
 
 .player {
   --accent: var(--hum);
@@ -315,24 +311,6 @@ code {
   display: grid;
   gap: 1.2rem;
 }
-.try__direction { display: flex; flex-wrap: wrap; gap: 0.6rem; }
-.try__direction input { position: absolute; opacity: 0; pointer-events: none; }
-.try__direction label {
-  padding: 0.6rem 1rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  cursor: pointer;
-  font-size: 0.92rem;
-  transition: border-color 0.15s, background 0.15s;
-}
-.try__direction input:checked + label {
-  border-color: var(--hum);
-  background: rgba(139, 123, 240, 0.16);
-  color: var(--hum-soft);
-}
-.try__direction input:focus-visible + label { outline: 2px solid var(--hum-soft); outline-offset: 2px; }
-
 .dropzone {
   display: grid;
   justify-items: center;

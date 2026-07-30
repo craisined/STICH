@@ -1,6 +1,6 @@
 # STICH — Demo Website
 
-A local demo site for the STICH model (humming ⇄ classical music).
+A local demo site for the STICH model (humming → classical music).
 Plain HTML/CSS/JS front end, Flask back end for the model.
 
 > **Current stage: presentable.** Every clip on the page is real model output.
@@ -9,11 +9,20 @@ Plain HTML/CSS/JS front end, Flask back end for the model.
 > "Hear it" gallery is rendered by `gen_examples.py` through that same code
 > path. No placeholders and no synthesized stand-ins remain.
 
+> **The site is humming → classical only.** The reverse generator exists and
+> `/api/convert` still accepts `classical_to_humming`, but its output is not
+> good enough to show, so nothing in the UI, the gallery, or the copy offers or
+> mentions that direction. The page describes the reverse generator only as
+> what the cycle-consistency loss is measured against during training — which
+> is the honest answer if a visitor asks why it is a CycleGAN. Keep it that way
+> unless that direction is retrained to a standard worth demoing.
+
 Needs three files the training side produces. `encoder.ts` is not in git (see
 `.gitignore`); the two generator checkpoints `gen_humming_to_classical.pth` /
-`gen_classical_to_humming.pth` are. `inference.py` looks for all three in the
-repo root, then `../models/`, then this directory, and `/api/convert` answers
-503 with the paths it searched if they are missing.
+`gen_classical_to_humming.pth` are. `inference.py` loads all three — both
+generators come up together even though the site only calls one. It looks for
+them in the repo root, then `../models/`, then this directory, and
+`/api/convert` answers 503 with the paths it searched if they are missing.
 
 ## Run it
 
@@ -141,11 +150,11 @@ which `127.0.0.1` counts as; over a LAN address the browser will refuse.
 
 ## Gallery clips
 
-`gen_examples.py` draws source clips from `../data/humtrans_processed/` and
-`../data/musicnet_processed/`, runs them through the same `inference.convert()`
-that serves visitors, and writes the thirteen files `index.html` references.
-The gallery therefore plays exactly what the upload box would return for those
-clips — no separate code path to drift out of step.
+`gen_examples.py` draws source hums from `../data/humtrans_processed/`, runs
+them through the same `inference.convert()` that serves visitors, and writes
+the six files `index.html` references. The gallery therefore plays exactly what
+the upload box would return for those clips — no separate code path to drift
+out of step.
 
 Nothing is written until every clip has rendered, so a missing model fails
 without leaving the gallery half old and half new.
@@ -161,7 +170,7 @@ Two things to know before committing the result:
 
 - **Listen first.** These pairs are the first thing a visitor hears, and a bad
   draw makes the model sound worse than it is.
-- **Size.** The thirteen clips total about 12 MB, and `computePeaks` in
+- **Size.** The six clips total about 4 MB, and `computePeaks` in
   `js/main.js` fetches every one of them on page load to draw its waveform.
   Worth revisiting if the demo ever leaves localhost.
 

@@ -45,7 +45,9 @@ BASE = Path(__file__).parent
 MODEL_DIRS = (BASE.parent, BASE.parent / "models", BASE)
 
 # Which generator translates which way. Both were trained as one CycleGAN, so
-# they are inverses of each other and the round trip in gen_examples.py works.
+# they are inverses of each other. The site only ever asks for
+# humming_to_classical; the reverse is kept because the pair is loaded together
+# and it is what the cycle loss was measured on.
 GENERATORS = {
     "humming_to_classical": "gen_humming_to_classical.pth",
     "classical_to_humming": "gen_classical_to_humming.pth",

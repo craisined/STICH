@@ -206,7 +206,6 @@
     const recorderBox = document.getElementById("recorder");
     const recordBtn = document.getElementById("recordBtn");
     const recStatus = document.getElementById("recordStatus");
-    const hummingRadio = document.getElementById("dir-h2c");
 
     const inputPlayer = new AudioPlayer(document.getElementById("inputPlayer"));
     const outputPlayer = new AudioPlayer(outWrap);
@@ -277,7 +276,6 @@
         setRecStatus("Encoding…");
         try {
           setFile(await toWavFile(new Blob(chunks, { type: mimeType })));
-          hummingRadio.checked = true; // they just hummed, so default that way
           setRecStatus("Recorded — press Convert.");
         } catch (err) {
           setRecStatus(`⚠ ${err.message}`, true);
@@ -343,7 +341,6 @@
       e.preventDefault();
       if (!chosen) return;
 
-      const direction = form.querySelector('input[name="direction"]:checked').value;
       result.hidden = false;
       outWrap.hidden = true;
       downloadLink.hidden = true;
@@ -358,7 +355,7 @@
       try {
         const fd = new FormData();
         fd.append("audio", chosen);
-        fd.append("direction", direction);
+        fd.append("direction", "humming_to_classical"); // the only direction the site offers
         const resp = await fetch("/api/convert", { method: "POST", body: fd });
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
