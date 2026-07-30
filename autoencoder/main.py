@@ -31,14 +31,14 @@ class UnpairedMusicDataset(Dataset):
 
 # 2. Generator Architecture
 class ResNet(nn.Module):
-    def __init__(self, channels=64):
+    def __init__(self, channels=64, kernel_size=3, dilation=1):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Conv1d(channels, channels, kernel_size=25, padding="same"),
-            nn.InstanceNorm1d(channels),
+            nn.Conv1d(channels, channels, kernel_size=kernel_size, padding="same", dilation=dilation),
+            nn.GroupNorm(8, channels),
             nn.ReLU(),
-            nn.Conv1d(channels, channels, kernel_size=25, padding="same"),
-            nn.InstanceNorm1d(channels),
+            nn.Conv1d(channels, channels, kernel_size=kernel_size, padding="same", dilation=dilation),
+            nn.GroupNorm(8, channels),
         )
 
     def forward(self, inp):
@@ -49,13 +49,19 @@ class Generator(nn.Module):
     def __init__(self):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Conv1d(16, 64, kernel_size=25, padding="same"),
-            ResNet(),
+            nn.Conv1d(16, 64, kernel_size=7, padding="same"),
+            ResNet(dilation=1),
             nn.ReLU(),
-            ResNet(),
+            ResNet(dilation=2),
             nn.ReLU(),
-            ResNet(),
-            nn.Conv1d(64, 16, kernel_size=25, padding="same"),
+            ResNet(dilation=4),
+            nn.ReLU(),
+            ResNet(dilation=1),
+            nn.ReLU(),
+            ResNet(dilation=2),
+            nn.ReLU(),
+            ResNet(dilation=4),
+            nn.Conv1d(64, 16, kernel_size=7, padding="same"),
         )
 
     def forward(self, inp):
