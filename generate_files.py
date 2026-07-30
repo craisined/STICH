@@ -33,11 +33,11 @@ def generate_embedding(audio_data):
     with torch.no_grad():
         return model.encode(audio_data).cpu().numpy()
 
-embedings = np.array([])
+embeddings = np.array([])
 count = 0
 for file in Path("data/musicnet_processed").iterdir():
     count += 1
     if count % 50 == 0:
         print(count)
-    embedings = np.append(embedings, generate_embedding(np.load(file)))
-np.save("cembeddings.npy", embedings)
+    embeddings = np.append(embeddings, generate_embedding(np.load(file)))
+np.save("cembeddings.npy", embeddings)
