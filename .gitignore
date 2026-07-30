@@ -1,0 +1,8 @@
+data/*_processed
+data/humtrans
+data/musicnet
+__pycache__
+.venv
+*.npy
+encoder.ts
+output
