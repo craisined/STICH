@@ -67,24 +67,7 @@ class Generator(nn.Module):
     def forward(self, inp):
         return self.network(inp)
 
-"""
-# 3. Discriminator Architecture
-class Discriminator(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.pool = nn.AdaptiveAvgPool1d(1)
-        self.network = nn.Sequential(
-            nn.Linear(16, 256),
-            nn.ReLU(),
-            nn.Linear(256, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1),
-        )
 
-    def forward(self, x):
-        x = self.pool(x).squeeze(-1)  # (Batch, 16)
-        return self.network(x)
-"""
 # 3. Patch1D Discriminator (Preserves temporal structural cues)
 class Discriminator(nn.Module):
     def __init__(self, in_channels=16):
@@ -93,7 +76,7 @@ class Discriminator(nn.Module):
             nn.Conv1d(in_channels, 64, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Conv1d(64, 128, kernel_size=4, stride=2, padding=1),
-            nn.InstanceNorm1d(128),
+            nn.BatchNorm1d(128),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Conv1d(128, 1, kernel_size=4, stride=1, padding=1),
         )
@@ -104,20 +87,30 @@ class Discriminator(nn.Module):
 
 # 4. Loss Functions
 class GeneratorLoss(nn.Module):
-    def __init__(self, cycle_consistency_factor=10):
+    def __init__(self, cycle_consistency_factor=10, identity_factor=5):
         super().__init__()
         self.cycle_consistency_factor = cycle_consistency_factor
+        self.identity_factor = identity_factor
         self.bce = nn.BCEWithLogitsLoss()
         self.l1 = nn.L1Loss()
 
-    def forward(self, generated_embedding, original, inverse_generator, discriminator):
+    def forward(
+        self, generated_embedding, original, generator, inverse_generator, discriminator
+    ):
         disc_result = discriminator(generated_embedding)
         gan_loss = self.bce(disc_result, torch.ones_like(disc_result))
-        
+
         reconstructed = inverse_generator(generated_embedding)
         cycle_consistency = self.l1(reconstructed, original)
-        
-        return gan_loss + (self.cycle_consistency_factor * cycle_consistency)
+
+        identity = generator(original)
+        identity_consistency = self.l1(identity, original)
+
+        return (
+            gan_loss
+            + (self.cycle_consistency_factor * cycle_consistency)
+            + (self.identity_factor * identity_consistency)
+        )
 
 
 class DiscriminatorLoss(nn.Module):
@@ -143,19 +136,20 @@ disc_classical = Discriminator().to(device)
 disc_humming = Discriminator().to(device)
 
 # Initialize Loss Functions
-criterion_G = GeneratorLoss(cycle_consistency_factor=5).to(device)
+criterion_G = GeneratorLoss().to(device)
 criterion_D = DiscriminatorLoss().to(device)
 
 # Initialize Optimizers
 optimizer_G = optim.Adam(
-    list(gen_humming_to_classical.parameters()) + list(gen_classical_to_humming.parameters()),
+    list(gen_humming_to_classical.parameters())
+    + list(gen_classical_to_humming.parameters()),
     lr=1e-4,
-    betas=(0.5, 0.999)
+    betas=(0.5, 0.999),
 )
 optimizer_D = optim.Adam(
     list(disc_classical.parameters()) + list(disc_humming.parameters()),
     lr=1e-4,
-    betas=(0.5, 0.999)
+    betas=(0.5, 0.999),
 )
 
 # Unified Dataset & DataLoader instantiation
@@ -167,8 +161,9 @@ train_loader = DataLoader(
     shuffle=True,
     drop_last=True,
     pin_memory=True if device.type == "cuda" else False,
-    num_workers=2
+    num_workers=2,
 )
+
 
 def main():
     epochs = 20
@@ -194,15 +189,23 @@ def main():
             # Classical Discriminator Loss
             real_disc_classical = disc_classical(classical)
             fake_disc_classical = disc_classical(fake_classical.detach())
-            loss_D_classical_real = criterion_D(real_disc_classical, torch.ones_like(real_disc_classical))
-            loss_D_classical_fake = criterion_D(fake_disc_classical, torch.zeros_like(fake_disc_classical))
+            loss_D_classical_real = criterion_D(
+                real_disc_classical, torch.ones_like(real_disc_classical)
+            )
+            loss_D_classical_fake = criterion_D(
+                fake_disc_classical, torch.zeros_like(fake_disc_classical)
+            )
             loss_D_classical = (loss_D_classical_real + loss_D_classical_fake) / 2
 
             # Humming Discriminator Loss
             real_disc_humming = disc_humming(humming)
             fake_disc_humming = disc_humming(fake_humming.detach())
-            loss_D_humming_real = criterion_D(real_disc_humming, torch.ones_like(real_disc_humming))
-            loss_D_humming_fake = criterion_D(fake_disc_humming, torch.zeros_like(fake_disc_humming))
+            loss_D_humming_real = criterion_D(
+                real_disc_humming, torch.ones_like(real_disc_humming)
+            )
+            loss_D_humming_fake = criterion_D(
+                fake_disc_humming, torch.zeros_like(fake_disc_humming)
+            )
             loss_D_humming = (loss_D_humming_real + loss_D_humming_fake) / 2
 
             # Total Discriminator Loss
@@ -218,27 +221,32 @@ def main():
             loss_G_humming_to_classical = criterion_G(
                 generated_embedding=fake_classical,
                 original=humming,
+                generator=gen_humming_to_classical,
                 inverse_generator=gen_classical_to_humming,
-                discriminator=disc_classical
+                discriminator=disc_classical,
             )
 
             loss_G_classical_to_humming = criterion_G(
                 generated_embedding=fake_humming,
                 original=classical,
+                generator=gen_classical_to_humming,
                 inverse_generator=gen_humming_to_classical,
-                discriminator=disc_humming
+                discriminator=disc_humming,
             )
 
             total_loss_G = loss_G_humming_to_classical + loss_G_classical_to_humming
             total_loss_G.backward()
             optimizer_G.step()
 
-        print(f"Epoch [{epoch + 1}/{epochs}] | Loss D: {total_loss_D.item():.4f} | Loss G: {total_loss_G.item():.4f}")
+        print(
+            f"Epoch [{epoch + 1}/{epochs}] | Loss D: {total_loss_D.item():.4f} | Loss G: {total_loss_G.item():.4f}"
+        )
 
     torch.save(gen_humming_to_classical.state_dict(), "gen_humming_to_classical.pth")
     torch.save(gen_classical_to_humming.state_dict(), "gen_classical_to_humming.pth")
 
     print("Generators saved successfully!")
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()
