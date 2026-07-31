@@ -3,3 +3,4 @@ librosa
 numpy
 torch
 torchaudio
+gunicorn
