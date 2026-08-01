@@ -137,13 +137,21 @@
       const progress = isFinite(dur) && dur > 0 ? this.audio.currentTime / dur : 0;
       const peaks = this.peaks || new Array(NBARS).fill(0.25);
       const n = peaks.length;
-      const gap = 2;
-      const bw = Math.max(1, (w - gap * (n - 1)) / n);
+      // One bar plus its gap. The pitch comes from the canvas width so the bars
+      // always span exactly [0, w] -- the scale _seek's click -> time mapping
+      // assumes. Fixing the gap instead and deriving the width from it lets the
+      // bars overflow a narrow canvas (the gallery's are ~200px, well under the
+      // 286px a 2px gap needs), which clips the tail of the waveform off-screen:
+      // the fill then looks complete while the clip still has seconds to run,
+      // and every seek lands later than the bar that was clicked.
+      const pitch = w / n;
+      const gap = Math.min(2, pitch * 0.3);
+      const bw = Math.max(1, pitch - gap);
       const mid = h / 2;
 
       for (let i = 0; i < n; i++) {
         const bh = Math.max(2, peaks[i] * (h - 2));
-        const x = i * (bw + gap);
+        const x = i * pitch;
         const played = (i + 0.5) / n <= progress;
         ctx.fillStyle = played ? this.accent : "rgba(164,157,196,0.35)";
         ctx.fillRect(x, mid - bh / 2, bw, bh);
