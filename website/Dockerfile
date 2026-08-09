@@ -9,7 +9,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Copy only requirements first to leverage Docker caching
-COPY ../requirements.txt .
+COPY requirements.txt .
 
 # Install dependencies without caching the index locally
 RUN pip install --no-cache-dir -r requirements.txt
